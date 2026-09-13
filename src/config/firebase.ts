@@ -1,12 +1,17 @@
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 // @ts-ignore
-import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { Auth, getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore'; //conector para la base de datos.
 
-// 1. Tus credenciales de Firebase
+//getReactNativePersistence: guarda la sesión del usuario en el dispositivo, para que no se cierre la sesión al cerrar la app.
+//initializeAuth y getAuth: Funciones para inicializar el motor de usuarios.
+//Auth: Es la etiqueta que se le da a la variable auth para que TypeScript sepa que es un objeto de tipo Auth. Esto es necesario porque al usar getAuth, TypeScript no sabe qué tipo de objeto es, y al usar initializeAuth, TypeScript sabe que es un objeto de tipo Auth.
+//ReactNativeAsyncStorage: La librería nativa del teléfono que funciona como el disco rígido de la app para guardar datos de texto en clave-valor.
+
+//credenciales de Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyDQ8UnUhif2i8M7bTxIKQwixC2S8H7UVBQ",
+    apiKey: "AIzaSyC4939rneP76EzJsXf6jGvcYnQEoiFDm08",
     authDomain: "almacen-mingo.firebaseapp.com",
     projectId: "almacen-mingo",
     storageBucket: "almacen-mingo.firebasestorage.app",
@@ -15,11 +20,11 @@ const firebaseConfig = {
     measurementId: "G-HR8FKT1C3D"
 };
 
-// 2. Inicializar Firebase (evita inicializar dos veces si se recarga la app)
+//inicializar Firebase App, si no hay ninguna app inicializada, inicializa una nueva app con las credenciales de Firebase. Si ya hay una app inicializada, obtiene la app existente.
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// 3. Inicializar Auth con persistencia en el dispositivo
-let auth;
+//inicializar Firebase Auth. 
+let auth: Auth; //Declaramos auth con tipo Auth.
 try {
     auth = initializeAuth(app, {
     persistence: getReactNativePersistence(ReactNativeAsyncStorage)
@@ -29,9 +34,9 @@ try {
     auth = getAuth(app);
 }
 
-// 4. Inicializar Firestore (Base de datos)
+//Inicializar Firestore (Base de datos)
 const db = getFirestore(app);
 
-// 5. Exportar para usarlos en las pantallas y contextos
+//Hacemos que auth y db sean exportables para poder usarlos en otros archivos.
 export { app, auth, db };
 
