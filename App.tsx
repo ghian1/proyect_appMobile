@@ -1,7 +1,7 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'; //Importar componentes de React Native para la interfaz de usuario
 import { AuthProvider, useAuth } from './src/context/Authcontext'; //usamos el envoltorio AuthProvider que creamos.
 import S01_LoginScreen from './src/screens/S01_LoginScreen';
-
+import RootNavigator from './src/navigation/RootNavigator';
 
 function RutasApp() {
 
@@ -43,6 +43,7 @@ function RutasApp() {
         return (
             <AuthProvider>
                 <RutasApp />
+                <RootNavigator />
             </AuthProvider>
     );
     }

@@ -3,6 +3,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   S03_Detalle: { productId: string };
   S05_AltaEditar: { productId?: string }; // opcional si se edita o crea
+  S07_StockList: undefined; //
 };
 
 export type MainTabParamList = {
