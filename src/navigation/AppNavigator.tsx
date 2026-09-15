@@ -1,13 +1,12 @@
-import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import S02_StockHomeScreen from '../screens/S02_StockHomeScreen';
-import {S03_ProductDetailScreen} from '../screens/S03_ProductDetailScreen';
-import {S04_ReponerScreen} from '../screens/S04_ReponerScreen';
-import {S05_AltaEditarScreen} from '../screens/S05_AltaEditarScreen';
-import {S06_PerfilScreen} from '../screens/S06_PerfilScreen';
-import {S07_StockListScreen} from '../screens/S07_StockListScreen';
+import { S02_StockHomeScreen } from '../screens/S02_StockHomeScreen';
+import { S03_ProductDetailScreen } from '../screens/S03_ProductDetailScreen';
+import { S04_ReponerScreen } from '../screens/S04_ReponerScreen';
+import { S05_AltaEditarScreen } from '../screens/S05_AltaEditarScreen';
+import { S06_PerfilScreen } from '../screens/S06_PerfilScreen';
+import { S07_StockListScreen } from '../screens/S07_StockListScreen';
 
 import { MainTabParamList, RootStackParamList } from '../types/navigation';
 
