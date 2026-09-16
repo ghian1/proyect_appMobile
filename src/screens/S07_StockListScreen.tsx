@@ -1,20 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { subscribeToProducts, Producto } from '../services/productService';
-import { RootStackParamList } from '../types/navigation';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+import { Producto, subscribeToProducts } from '../services/productService';
+import { StockStackParamList } from '../types/navigation';
+
+type NavigationProp = NativeStackNavigationProp<StockStackParamList>;
 
 export function S07_StockListScreen(): React.ReactNode {
   const navigation = useNavigation<NavigationProp>();
@@ -42,7 +44,7 @@ export function S07_StockListScreen(): React.ReactNode {
     return (
       <TouchableOpacity
         style={styles.cardProducto}
-        onPress={() => navigation.navigate('S03_Detalle', { productId: item.id! })}
+        onPress={() => navigation.navigate('ProductDetail', { productId: item.id! })}
       >
         <View style={styles.infoProducto}>
           <Text style={styles.nombreProducto}>{item.nombre}</Text>
@@ -71,7 +73,7 @@ export function S07_StockListScreen(): React.ReactNode {
         />
         <TouchableOpacity
           style={styles.botonNuevo}
-          onPress={() => navigation.navigate('S05_AltaEditar', {})}
+          onPress={() => navigation.navigate('ProductEdit', {})}
         >
           <Text style={styles.textoBotonNuevo}>+ Agregar</Text>
         </TouchableOpacity>

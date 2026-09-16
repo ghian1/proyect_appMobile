@@ -1,25 +1,25 @@
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   ActivityIndicator,
-  TouchableOpacity,
   Alert,
+  Image,
   ScrollView,
-  Image
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { doc, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Producto } from '../services/productService';
-import { RootStackParamList } from '../types/navigation';
+import { StockStackParamList } from '../types/navigation';
 
-type RouteProps = RouteProp<RootStackParamList, 'S03_Detalle'>;
-type NavigationProps = NativeStackNavigationProp<RootStackParamList>;
+type RouteProps = RouteProp<StockStackParamList, 'ProductDetail'>;
+type NavigationProps = NativeStackNavigationProp<StockStackParamList>;
 
 export function S03_ProductDetailScreen(): React.ReactNode {
   const route = useRoute<RouteProps>();
@@ -42,7 +42,7 @@ export function S03_ProductDetailScreen(): React.ReactNode {
     });
 
     return () => unsubscribe();
-  }, [productId]);
+  }, [productId, navigation]);
 
   const handleEliminar = () => {
     Alert.alert(
@@ -112,7 +112,7 @@ export function S03_ProductDetailScreen(): React.ReactNode {
         <View style={styles.acciones}>
           <TouchableOpacity
             style={styles.botonEditar}
-            onPress={() => navigation.navigate('S05_AltaEditar', { productId })}
+            onPress={() => navigation.navigate('ProductEdit', { productId })}
           >
             <Text style={styles.textoBotonEditar}>Editar Producto</Text>
           </TouchableOpacity>
