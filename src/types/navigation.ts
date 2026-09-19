@@ -27,5 +27,9 @@ export type StockStackParamList = {
   ProductDetail: { productId: string };
   ProductEdit: { productId?: string };
 };
-
+// 4. Pantallas del modulo de fiado
+export type FiadosParamList = {
+  S08_FiadosList: undefined;
+  
+};
 //Luego agregaremos los contratos de las demas pantallas.

@@ -13,24 +13,24 @@ export function S02_StockHomeScreen(): React.ReactNode {
   const { user } = useAuth();
   const navigation = useNavigation<NavigationProp>();
 
-  const nombreUsuario = user?.displayName || user?.email?.split('@')[0] || 'Usuario'; //Obtenemos el nombre del usuario logueado, si no tiene displayName usamos el email antes del @, si no hay email mostramos 'Usuario'
+  const nombreUsuario = user?.displayName || user?.email?.split('@')[0] || 'Usuario';
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Encabezado con información del usuario */}
+        {/* Encabezado */}
         <View style={styles.header}>
           <Text style={styles.saludo}>Bienvenido/a 👋</Text>
           <Text style={styles.usuario}>{nombreUsuario}</Text>
           <Text style={styles.subtitulo}>Almacén Mingo - Panel de Control</Text>
         </View>
 
-        {/* Grilla con las tarjetas de los módulos */}
+        {/* Grilla de Módulos */}
         <View style={styles.grid}>
           {/* Módulo 1: Gestión de Stock */}
           <TouchableOpacity 
             style={styles.cardMenu} 
-            onPress={() => navigation.navigate('StockFlow')} //Navegamos al flujo de stock, que contiene la lista de productos, el detalle y la edición/alta de productos.
+            onPress={() => navigation.navigate('StockFlow')}
           >
             <View style={[styles.iconoContainer, { backgroundColor: '#E0F2FE' }]}>
               <Text style={styles.emoji}>📦</Text>
@@ -42,7 +42,7 @@ export function S02_StockHomeScreen(): React.ReactNode {
           {/* Módulo 2: Registro de Ventas */}
           <TouchableOpacity 
             style={styles.cardMenu} 
-            onPress={() => navigation.navigate('VentasFlow')} //Navegamos al flujo de ventas.
+            onPress={() => navigation.navigate('VentasFlow')}
           >
             <View style={[styles.iconoContainer, { backgroundColor: '#DCFCE7' }]}>
               <Text style={styles.emoji}>🛒</Text>
@@ -54,7 +54,7 @@ export function S02_StockHomeScreen(): React.ReactNode {
           {/* Módulo 3: Libreta de Fiados */}
           <TouchableOpacity 
             style={styles.cardMenu} 
-            onPress={() => navigation.navigate('FiadosFlow')} //Navegamos al flujo de fiados.
+            onPress={() => navigation.navigate('FiadosFlow')}
           >
             <View style={[styles.iconoContainer, { backgroundColor: '#FEF3C7' }]}>
               <Text style={styles.emoji}>📓</Text>
@@ -66,7 +66,7 @@ export function S02_StockHomeScreen(): React.ReactNode {
           {/* Módulo 4: Compras a Proveedores */}
           <TouchableOpacity 
             style={styles.cardMenu} 
-            onPress={() => navigation.navigate('ComprasFlow')} //Navegamos al flujo de compras.
+            onPress={() => navigation.navigate('ComprasFlow')}
           >
             <View style={[styles.iconoContainer, { backgroundColor: '#F3E8FF' }]}>
               <Text style={styles.emoji}>🚚</Text>
