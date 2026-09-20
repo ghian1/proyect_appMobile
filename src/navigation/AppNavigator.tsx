@@ -2,28 +2,27 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet, Text, View } from 'react-native';
 
-
-//Solo importamos las pantallas de las solapas inferiores y no las pantallas internas de cada módulo, ya que esas se manejan dentro de cada flujo de navegación (StockFlow, VentasFlow, FiadosFlow, ComprasFlow)
+// Pantallas de las solapas inferiores
 import { S02_StockHomeScreen } from '../screens/S02_StockHomeScreen';
 import { S04_ReponerScreen } from '../screens/S04_ReponerScreen';
 import { S06_PerfilScreen } from '../screens/S06_PerfilScreen';
 
-
+// Tipados y navegadores anidados
 import { MainTabParamList, RootStackParamList } from '../types/navigation';
 import FiadosNavigator from './FiadosNavigator';
 import StockNavigator from './StockNavigator';
 
-const Tab = createBottomTabNavigator<MainTabParamList>(); //inicializamos el tab navigator para la navegación de las solapas inferiores
-const Stack = createNativeStackNavigator<RootStackParamList>(); //inicializamos el stack navigator para la navegación principal de la app, que contendrá las pantallas de autenticación y la navegación principal de la app.
+const Tab = createBottomTabNavigator<MainTabParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-//Configuracion de las 3 solapas inferiores de la App.
+// Configuración de las solapas inferiores de la App
 function TabNavigator() {
   return (
     <Tab.Navigator 
       screenOptions={{
         headerStyle: { backgroundColor: '#F2F4F7' },
-        tabBarActiveTintColor: '#007AFF', //cuando estan activas se ponen azules.
-        tabBarInactiveTintColor: '#888888', //cuando estan inactivas se ponen grises.
+        tabBarActiveTintColor: '#007AFF',
+        tabBarInactiveTintColor: '#888888',
       }}
     >
       <Tab.Screen 
@@ -45,7 +44,7 @@ function TabNavigator() {
   );
 }
 
-//Configuracion de la navegación principal de la App, que contiene las solapas inferiores y los flujos de navegación de cada módulo.
+// Configuración de la navegación principal de la App
 export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -56,10 +55,10 @@ export default function AppNavigator() {
         component={VentasPlaceholder} 
         options={{ headerShown: true, title: 'Ventas' }} 
       />
-      <Stack.Screen //Sacamos el place holder y ponemos el flujo de navegación de Fiados.
-        name="FiadosFlow"
-        component={FiadosNavigator}
-        options={{ headerShown: false }}
+      <Stack.Screen 
+        name="FiadosFlow" 
+        component={FiadosNavigator} 
+        options={{ headerShown: false }} 
       />
       <Stack.Screen 
         name="ComprasFlow" 
@@ -70,7 +69,7 @@ export default function AppNavigator() {
   );
 }
 
-//Estilos.
+// Estilos para los placeholders pendientes
 const styles = StyleSheet.create({
   center: {
     flex: 1,
@@ -91,27 +90,11 @@ const styles = StyleSheet.create({
   },
 });
 
-
-
-
-
-
-
-
-//Modulos que todavia no desarrollamos. 
+// Módulos que todavía no desarrollamos
 function VentasPlaceholder() {
   return (
     <View style={styles.center}>
       <Text style={styles.title}>Módulo de Ventas</Text>
-      <Text style={styles.subtitle}>En desarrollo...</Text>
-    </View>
-  );
-}
-
-function FiadosPlaceholder() {
-  return (
-    <View style={styles.center}>
-      <Text style={styles.title}>Libreta de Fiados</Text>
       <Text style={styles.subtitle}>En desarrollo...</Text>
     </View>
   );
@@ -125,5 +108,3 @@ function ComprasPlaceholder() {
     </View>
   );
 }
-
-//
