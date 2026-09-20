@@ -17,29 +17,36 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   subscribeToClientesFiados,
   crearClienteFiado,
+  registrarMovimientoFiado,
   ClienteFiado,
 } from '../services/fiadoService';
 
 export default function S08_FiadosScreen(): React.ReactNode {
-  // Estados de la lista
+  // Lista de clientes y búsqueda
   const [busqueda, setBusqueda] = useState('');
   const [clientes, setClientes] = useState<ClienteFiado[]>([]);
   const [cargando, setCargando] = useState(true);
 
-  // Estados del Modal / Formulario
-  const [modalVisible, setModalVisible] = useState(false);
-  const [guardando, setGuardando] = useState(false);
+  // Modal 1: Nuevo Cliente
+  const [modalClienteVisible, setModalClienteVisible] = useState(false);
+  const [guardandoCliente, setGuardandoCliente] = useState(false);
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [notas, setNotas] = useState('');
 
+  // Modal 2: Cargar / Descontar Saldo
+  const [modalSaldoVisible, setModalSaldoVisible] = useState(false);
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteFiado | null>(null);
+  const [tipoMovimiento, setTipoMovimiento] = useState<'FIADO' | 'PAGO'>('FIADO');
+  const [monto, setMonto] = useState('');
+  const [concepto, setConcepto] = useState('');
+  const [procesandoSaldo, setProcesandoSaldo] = useState(false);
+
   useEffect(() => {
-    // Suscripción en tiempo real a Firestore
     const unsubscribe = subscribeToClientesFiados((data) => {
       setClientes(data);
       setCargando(false);
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -47,11 +54,12 @@ export default function S08_FiadosScreen(): React.ReactNode {
     c.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
 
-  const resetFormulario = () => {
+  // 1. Resetear y Guardar Nuevo Cliente
+  const resetFormCliente = () => {
     setNombre('');
     setTelefono('');
     setNotas('');
-    setModalVisible(false);
+    setModalClienteVisible(false);
   };
 
   const handleGuardarCliente = async () => {
@@ -61,41 +69,87 @@ export default function S08_FiadosScreen(): React.ReactNode {
     }
 
     try {
-      setGuardando(true);
+      setGuardandoCliente(true);
       await crearClienteFiado({
         nombre: nombre.trim(),
-        telefono: telefono.trim() || undefined,
-        notas: notas.trim() || undefined,
+        telefono: telefono.trim() ? telefono.trim() : '', // Evitamos valores undefined
+        notas: notas.trim() ? notas.trim() : '', // Previene crash si no pones descripción
       });
 
       Alert.alert('¡Éxito!', 'Cliente registrado correctamente.');
-      resetFormulario();
+      resetFormCliente();
     } catch (error) {
-      Alert.alert('Error', 'No se pudo guardar el cliente. Intentá de nuevo.');
+      Alert.alert('Error', 'No se pudo guardar el cliente.');
     } finally {
-      setGuardando(false);
+      setGuardandoCliente(false);
+    }
+  };
+
+  // 2. Abrir Modal y Procesar Saldo (+ / -)
+  const abrirModalSaldo = (cliente: ClienteFiado, tipo: 'FIADO' | 'PAGO') => {
+    setClienteSeleccionado(cliente);
+    setTipoMovimiento(tipo);
+    setMonto('');
+    setConcepto(tipo === 'FIADO' ? 'Compra fiada' : 'Entrega / Pago');
+    setModalSaldoVisible(true);
+  };
+
+  const handleProcesarSaldo = async () => {
+    const montoNum = parseFloat(monto.replace(',', '.'));
+
+    if (isNaN(montoNum) || montoNum <= 0) {
+      Alert.alert('Monto inválido', 'Por favor ingresá un monto mayor a 0.');
+      return;
+    }
+
+    if (!clienteSeleccionado?.id) return;
+
+    try {
+      setProcesandoSaldo(true);
+      // Asignamos una descripción por defecto si queda vacía
+      const conceptoValido = concepto.trim()
+        ? concepto.trim()
+        : tipoMovimiento === 'FIADO'
+        ? 'Compra fiada'
+        : 'Entrega / Pago';
+
+      await registrarMovimientoFiado(
+        clienteSeleccionado.id,
+        montoNum,
+        tipoMovimiento,
+        conceptoValido
+      );
+
+      Alert.alert(
+        '¡Éxito!',
+        tipoMovimiento === 'FIADO'
+          ? `Se sumaron $${montoNum} a la deuda de ${clienteSeleccionado.nombre}`
+          : `Se descontaron $${montoNum} de la deuda de ${clienteSeleccionado.nombre}`
+      );
+      setModalSaldoVisible(false);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo actualizar el saldo.');
+    } finally {
+      setProcesandoSaldo(false);
     }
   };
 
   const renderItem = ({ item }: { item: ClienteFiado }) => (
-    <TouchableOpacity
-      style={styles.cardCliente}
-      onPress={() =>
-        Alert.alert(
-          item.nombre,
-          `Deuda total: $${item.deudaTotal.toLocaleString('es-AR')}\n` +
-            (item.notas ? `Notas: ${item.notas}` : '')
-        )
-      }
-    >
+    <View style={styles.cardCliente}>
       <View style={styles.infoCliente}>
         <Text style={styles.nombreCliente}>{item.nombre}</Text>
         {item.telefono ? (
           <Text style={styles.telefonoCliente}>📞 {item.telefono}</Text>
         ) : null}
+        {item.notas ? (
+          <Text style={styles.notasCliente} numberOfLines={1}>
+            📝 {item.notas}
+          </Text>
+        ) : null}
       </View>
-      <View style={styles.deudaContainer}>
-        <Text style={styles.labelDeuda}>Deuda Total</Text>
+
+      <View style={styles.derechaContainer}>
+        <Text style={styles.labelDeuda}>Deuda</Text>
         <Text
           style={[
             styles.montoDeuda,
@@ -104,13 +158,30 @@ export default function S08_FiadosScreen(): React.ReactNode {
         >
           ${item.deudaTotal.toLocaleString('es-AR')}
         </Text>
+
+        {/* Botones rápidos para Sumar (+) o Descontar (-) */}
+        <View style={styles.botonesAccion}>
+          <TouchableOpacity
+            style={[styles.btnMini, styles.btnRestar]}
+            onPress={() => abrirModalSaldo(item, 'PAGO')}
+          >
+            <Text style={styles.textoBtnMini}>- Cobrar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.btnMini, styles.btnSumar]}
+            onPress={() => abrirModalSaldo(item, 'FIADO')}
+          >
+            <Text style={styles.textoBtnMini}>+ Fiar</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* Barra de búsqueda y botón nuevo cliente */}
+      {/* Header y buscador */}
       <View style={styles.header}>
         <TextInput
           style={styles.inputBuscador}
@@ -121,13 +192,12 @@ export default function S08_FiadosScreen(): React.ReactNode {
         />
         <TouchableOpacity
           style={styles.botonNuevo}
-          onPress={() => setModalVisible(true)}
+          onPress={() => setModalClienteVisible(true)}
         >
           <Text style={styles.textoBotonNuevo}>+ Cliente</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Lista principal */}
       {cargando ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -148,12 +218,12 @@ export default function S08_FiadosScreen(): React.ReactNode {
         />
       )}
 
-      {/* Modal para alta de nuevo cliente */}
+      {/* MODAL 1: Crear Nuevo Cliente */}
       <Modal
-        visible={modalVisible}
+        visible={modalClienteVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={resetFormulario}
+        onRequestClose={resetFormCliente}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -196,8 +266,8 @@ export default function S08_FiadosScreen(): React.ReactNode {
               <View style={styles.modalAcciones}>
                 <TouchableOpacity
                   style={styles.botonCancelar}
-                  onPress={resetFormulario}
-                  disabled={guardando}
+                  onPress={resetFormCliente}
+                  disabled={guardandoCliente}
                 >
                   <Text style={styles.textoBotonCancelar}>Cancelar</Text>
                 </TouchableOpacity>
@@ -205,9 +275,9 @@ export default function S08_FiadosScreen(): React.ReactNode {
                 <TouchableOpacity
                   style={styles.botonGuardar}
                   onPress={handleGuardarCliente}
-                  disabled={guardando}
+                  disabled={guardandoCliente}
                 >
-                  {guardando ? (
+                  {guardandoCliente ? (
                     <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
                     <Text style={styles.textoBotonGuardar}>Guardar</Text>
@@ -215,6 +285,77 @@ export default function S08_FiadosScreen(): React.ReactNode {
                 </TouchableOpacity>
               </View>
             </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* MODAL 2: Sumar (+) o Restar (-) Saldo */}
+      <Modal
+        visible={modalSaldoVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalSaldoVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {tipoMovimiento === 'FIADO'
+                ? `+ Cargar Fiado a ${clienteSeleccionado?.nombre}`
+                : `- Registrar Pago de ${clienteSeleccionado?.nombre}`}
+            </Text>
+
+            <Text style={styles.labelInput}>Monto ($) *</Text>
+            <TextInput
+              style={styles.inputModal}
+              placeholder="0.00"
+              placeholderTextColor="#A0AEC0"
+              keyboardType="decimal-pad"
+              value={monto}
+              onChangeText={setMonto}
+            />
+
+            <Text style={styles.labelInput}>Descripción / Concepto</Text>
+            <TextInput
+              style={styles.inputModal}
+              placeholder={
+                tipoMovimiento === 'FIADO'
+                  ? 'Ej: Compra de mercadería'
+                  : 'Ej: Pago a cuenta'
+              }
+              placeholderTextColor="#A0AEC0"
+              value={concepto}
+              onChangeText={setConcepto}
+            />
+
+            <View style={styles.modalAcciones}>
+              <TouchableOpacity
+                style={styles.botonCancelar}
+                onPress={() => setModalSaldoVisible(false)}
+                disabled={procesandoSaldo}
+              >
+                <Text style={styles.textoBotonCancelar}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.botonGuardar,
+                  tipoMovimiento === 'FIADO' ? styles.btnSumar : styles.btnRestar,
+                ]}
+                onPress={handleProcesarSaldo}
+                disabled={procesandoSaldo}
+              >
+                {procesandoSaldo ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.textoBotonGuardar}>
+                    {tipoMovimiento === 'FIADO' ? 'Sumar Deuda' : 'Descontar Deuda'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -248,21 +389,33 @@ const styles = StyleSheet.create({
   cardCliente: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 10,
-    marginBottom: 10,
+    borderRadius: 12,
+    marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     elevation: 1,
   },
-  infoCliente: { flex: 1 },
-  nombreCliente: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
+  infoCliente: { flex: 1, paddingRight: 10 },
+  nombreCliente: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
   telefonoCliente: { fontSize: 12, color: '#666', marginTop: 4 },
-  deudaContainer: { alignItems: 'flex-end' },
-  labelDeuda: { fontSize: 11, color: '#666', textTransform: 'uppercase' },
-  montoDeuda: { fontSize: 16, fontWeight: 'bold', marginTop: 2 },
+  notasCliente: { fontSize: 12, color: '#888', marginTop: 2, fontStyle: 'italic' },
+  derechaContainer: { alignItems: 'flex-end' },
+  labelDeuda: { fontSize: 10, color: '#666', textTransform: 'uppercase' },
+  montoDeuda: { fontSize: 16, fontWeight: 'bold', marginBottom: 8 },
   conDeuda: { color: '#EF4444' },
   sinDeuda: { color: '#10B981' },
+  botonesAccion: { flexDirection: 'row', gap: 6 },
+  btnMini: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  btnSumar: { backgroundColor: '#EF4444' },
+  btnRestar: { backgroundColor: '#10B981' },
+  textoBtnMini: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 11 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   textoVacio: { textAlign: 'center', color: '#888', marginTop: 40, fontSize: 14 },
 
@@ -277,13 +430,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
-    maxHeight: '80%',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1F2937',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   labelInput: {
     fontSize: 13,
@@ -303,7 +455,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   textArea: {
-    height: 80,
+    height: 70,
     textAlignVertical: 'top',
     paddingTop: 10,
   },
@@ -322,10 +474,9 @@ const styles = StyleSheet.create({
   textoBotonCancelar: { color: '#374151', fontWeight: '600', fontSize: 14 },
   botonGuardar: {
     paddingVertical: 12,
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     borderRadius: 8,
     backgroundColor: '#007AFF',
-    minWidth: 100,
     alignItems: 'center',
   },
   textoBotonGuardar: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
