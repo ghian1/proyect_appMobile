@@ -20,6 +20,7 @@ import {
   registrarMovimientoFiado,
   ClienteFiado,
 } from '../services/fiadoService';
+import { sanearImporte } from '../utils/sanitizers';
 
 export default function S08_FiadosScreen(): React.ReactNode {
   // Lista de clientes y búsqueda
@@ -95,7 +96,8 @@ export default function S08_FiadosScreen(): React.ReactNode {
   };
 
   const handleProcesarSaldo = async () => {
-    const montoNum = parseFloat(monto.replace(',', '.'));
+    //sanitizer para el monto de los fiados
+    const montoNum = sanearImporte(monto);
 
     if (isNaN(montoNum) || montoNum <= 0) {
       Alert.alert('Monto inválido', 'Por favor ingresá un monto mayor a 0.');
