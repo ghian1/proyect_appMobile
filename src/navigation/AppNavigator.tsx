@@ -10,6 +10,7 @@ import { S06_PerfilScreen } from '../screens/S06_PerfilScreen';
 
 
 import { MainTabParamList, RootStackParamList } from '../types/navigation';
+import FiadosNavigator from './FiadosNavigator';
 import StockNavigator from './StockNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>(); //inicializamos el tab navigator para la navegación de las solapas inferiores
@@ -55,10 +56,10 @@ export default function AppNavigator() {
         component={VentasPlaceholder} 
         options={{ headerShown: true, title: 'Ventas' }} 
       />
-      <Stack.Screen 
-        name="FiadosFlow" 
-        component={FiadosPlaceholder} 
-        options={{ headerShown: true, title: 'Libreta de Fiados' }} 
+      <Stack.Screen //Sacamos el place holder y ponemos el flujo de navegación de Fiados.
+        name="FiadosFlow"
+        component={FiadosNavigator}
+        options={{ headerShown: false }}
       />
       <Stack.Screen 
         name="ComprasFlow" 
