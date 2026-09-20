@@ -11,6 +11,7 @@ import { S06_PerfilScreen } from '../screens/S06_PerfilScreen';
 
 import { MainTabParamList, RootStackParamList } from '../types/navigation';
 import StockNavigator from './StockNavigator';
+import FiadosNavigator from './FiadosNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>(); //inicializamos el tab navigator para la navegación de las solapas inferiores
 const Stack = createNativeStackNavigator<RootStackParamList>(); //inicializamos el stack navigator para la navegación principal de la app, que contendrá las pantallas de autenticación y la navegación principal de la app.
@@ -57,7 +58,7 @@ export default function AppNavigator() {
       />
       <Stack.Screen 
         name="FiadosFlow" 
-        component={FiadosPlaceholder} 
+        component={FiadosNavigator} 
         options={{ headerShown: true, title: 'Libreta de Fiados' }} 
       />
       <Stack.Screen 
@@ -124,5 +125,3 @@ function ComprasPlaceholder() {
     </View>
   );
 }
-
-//
