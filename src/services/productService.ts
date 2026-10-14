@@ -1,13 +1,13 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   FieldValue,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp,
+  serverTimestamp, //Agregamos getDoc para obtener un documento por su ID. 
   updateDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -19,12 +19,13 @@ const COLECCION_PRODUCTOS = "productos";
 export interface Producto {
   id?: string;
   nombre: string;
-  categoria: string; // 'Comestibles' | 'Bebidas' | 'Limpieza' | 'Almacén'
+  categorias?: string[]; //Lo hice un array de strings para permitir múltiples categorías por producto. 
+  categoria?: string; //La categoría principal del producto, que puede ser una cadena de texto o undefined si no se especifica
   precio: number;
   stock: number;
   descripcion?: string;
-  imagenUrl?: string;
   createdAt?: FieldValue | Date;
+  imagenUrl?: string | null; //Contrato para la URL de la imagen del producto, que puede ser una cadena de texto o null si no hay imagen
 }
 
 export type NuevoProductoInput = Omit<Producto, "id" | "creadoEn" | "actualizadoEn">;
@@ -58,6 +59,22 @@ export function suscribirAProductos(
   );
 }
 
+//funcion para obtener un producto por su ID. Lo usamos para el UseEfect de recuperar los datos del producto(AltaEditarScreen).
+//getdoc es una funcion de firebase que nos permite obtener un documento de la base de datos a partir de su referencia.
+export async function obtenerProductoPorId(idProducto: string): Promise<Producto | null> {
+  if (!idProducto) throw new Error("Se requiere el ID del producto.");
+  const docRef = doc(db, COLECCION_PRODUCTOS, idProducto);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) {
+    return null;
+  }
+
+  return {
+    id: docSnap.id,
+    ...(docSnap.data() as Omit<Producto, "id">),
+  };
+}
 
 // 2. Crear un nuevo producto (S05)
 export async function crearProducto(datos: NuevoProductoInput): Promise<string> {
@@ -74,21 +91,29 @@ export async function crearProducto(datos: NuevoProductoInput): Promise<string> 
     throw new Error("El stock no puede ser negativo (Invariante I-04).");
   }
 
+
+
+  // Normalizamos: si viene el array de categorías lo usamos, si viene una sola la metemos en array
+  const categoriasFinales = datos.categorias && datos.categorias.length > 0 
+    ? datos.categorias 
+    : (datos.categoria ? [datos.categoria] : ["Almacén"]);
+
   const payload = {
     nombre: datos.nombre.trim(),
-    categoria: datos.categoria || "Almacén",
+    //Guardamos el arreglo completo y el primer elemento como fallback
+    categorias: categoriasFinales,
+    categoria: categoriasFinales[0],
     precio: Number(datos.precio),
     stock: Number(datos.stock),
     descripcion: datos.descripcion ? datos.descripcion.trim() : "",
+    imagenUrl: datos.imagenUrl || null,
     creadoEn: serverTimestamp(),
     actualizadoEn: serverTimestamp(),
   };
 
-
   const docRef = await addDoc(collection(db, COLECCION_PRODUCTOS), payload);
   return docRef.id;
 }
-
 
 // 3. Actualizar un producto existente (precio, stock o descripción)
 export async function actualizarProducto(
@@ -108,12 +133,11 @@ export async function actualizarProducto(
     payload.nombre = cambios.nombre.trim();
   }
 
-  await updateDoc(docRef, payload);
-}
+  //Si vienen categorías nuevas, las asignamos al payload
+  if (cambios.categorias && cambios.categorias.length > 0) {
+    payload.categorias = cambios.categorias;
+    payload.categoria = cambios.categorias[0];
+  }
 
-// 4. Eliminar un producto (S03)
-export async function eliminarProducto(idProducto: string): Promise<void> {
-  if (!idProducto) throw new Error("Se requiere el ID del producto a eliminar.");
-  const docRef = doc(db, COLECCION_PRODUCTOS, idProducto);
-  await deleteDoc(docRef);
+  await updateDoc(docRef, payload);
 }

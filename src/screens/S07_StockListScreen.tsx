@@ -54,9 +54,14 @@ export function S07_StockListScreen() {
         .toLowerCase()
         .includes(busqueda.toLowerCase().trim());
 
+      // [NUEVO] Comprueba si la categoría seleccionada está adentro del array 'categorias' o en el campo singular 'categoria'
       const coincideCategoria =
         categoriaSeleccionada === 'Todas' ||
-        item.categoria?.toLowerCase() === categoriaSeleccionada.toLowerCase(); // Comparamos la categoría seleccionada con la categoría del producto, ignorando mayúsculas y minúsculas
+        (Array.isArray(item.categorias) &&
+          item.categorias.some(
+            (c) => c.toLowerCase() === categoriaSeleccionada.toLowerCase()
+          )) ||
+        item.categoria?.toLowerCase() === categoriaSeleccionada.toLowerCase();
 
       return coincideNombre && coincideCategoria;
     });
@@ -78,7 +83,12 @@ export function S07_StockListScreen() {
         {/* renderiza la información del producto, incluyendo el nombre, la categoría y el precio. */}
         <View style={styles.cardInfo}>
           <Text style={styles.cardTitulo}>{item.nombre}</Text>
-          <Text style={styles.cardCategoria}>{item.categoria || 'Almacén'}</Text>
+          <Text style={styles.cardCategoria}> 
+            {Array.isArray(item.categorias) && item.categorias.length > 0
+              ? item.categorias.join(' • ')
+              : item.categoria || 'Almacén'} 
+              {/* Si el producto tiene categorías, las mostramos separadas por " • ". Si no tiene categorías, mostramos la categoría singular o "Almacén" como fallback. */}
+          </Text>
           <Text style={styles.cardPrecio}>${item.precio.toFixed(2)}</Text>
         </View>
 
