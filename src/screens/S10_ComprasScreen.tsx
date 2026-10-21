@@ -17,6 +17,7 @@ import {
   obtenerPlanillaBorrador,
   guardarPlanillaBorrador,
   confirmarCompraYSumarStock,
+  obtenerHistorialCompras, // 👈 Asegurate de tenerlo o definirlo en tu servicio
 } from '../services/compraService';
 import { sanearEntero, sanearImporte } from '../utils/sanitizers';
 
@@ -29,13 +30,23 @@ export default function S10_ComprasScreen(): React.ReactNode {
   const [planillaItems, setPlanillaItems] = useState<ItemCompra[]>([]);
   const [procesando, setProcesando] = useState(false);
 
-  // Modal para agregar producto a la planilla
+  // Modal 1: Agregar/Editar producto en planilla
   const [modalVisible, setModalVisible] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [cantidadInput, setCantidadInput] = useState('');
   const [precioCostoInput, setPrecioCostoInput] = useState('');
+  const [esEdicion, setEsEdicion] = useState(false);
 
-  // 1. Cargar productos y recuperar el borrador si existía
+  // Modal 2: Confirmar compra con total de ticket real
+  const [modalConfirmacionVisible, setModalConfirmacionVisible] = useState(false);
+  const [montoTicketInput, setMontoTicketInput] = useState('');
+
+  // Modal 3: Historial de Planillas
+  const [modalHistorialVisible, setModalHistorialVisible] = useState(false);
+  const [historialCompras, setHistorialCompras] = useState<any[]>([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
+
+  // 1. Cargar productos y recuperar borrador
   useEffect(() => {
     const unsubscribe = suscribirAProductos(
       (data) => {
@@ -48,7 +59,6 @@ export default function S10_ComprasScreen(): React.ReactNode {
       }
     );
 
-    // Recuperar la planilla en borrador si el usuario había dejado una armada
     obtenerPlanillaBorrador().then((borrador) => {
       if (borrador && borrador.items) {
         setPlanillaItems(borrador.items);
@@ -62,18 +72,49 @@ export default function S10_ComprasScreen(): React.ReactNode {
     p.nombre ? p.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()) : false
   );
 
-  const totalGasto = planillaItems.reduce((acc, item) => acc + item.subtotal, 0);
+  const totalCalculado = planillaItems.reduce((acc, item) => acc + item.subtotal, 0);
 
-  // 2. Abrir Modal para ingresar costo y cantidad
+  // Abrir y cargar historial de compras
+  const abrirHistorial = async () => {
+    setModalHistorialVisible(true);
+    setCargandoHistorial(true);
+    try {
+      const data = await obtenerHistorialCompras();
+      setHistorialCompras(data);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo cargar el historial de compras.');
+    } finally {
+      setCargandoHistorial(false);
+    }
+  };
+
+  // 2. Abrir Modal para ingresar un nuevo producto desde la búsqueda
   const abrirModalProducto = (prod: Producto) => {
     setProductoSeleccionado(prod);
     setCantidadInput('');
     setPrecioCostoInput(prod.precioCosto ? prod.precioCosto.toString() : '');
+    setEsEdicion(false);
     setModalVisible(true);
   };
 
-  // 3. Agregar / Actualizar producto en la planilla
-  const handleAgregarAPlanilla = async () => {
+  // 3. Abrir Modal para EDITAR un producto que ya está en la planilla
+  const abrirModalEditarItem = (item: ItemCompra) => {
+    const prodRef = productos.find((p) => p.id === item.productId) || {
+      id: item.productId,
+      nombre: item.nombre,
+      precio: 0,
+      stock: 0,
+    };
+
+    setProductoSeleccionado(prodRef);
+    setCantidadInput(item.cantidad.toString());
+    setPrecioCostoInput(item.precioCosto.toString());
+    setEsEdicion(true);
+    setModalVisible(true);
+  };
+
+  // 4. Guardar o Actualizar producto en la planilla
+  const handleGuardarEnPlanilla = async () => {
     if (!productoSeleccionado || !productoSeleccionado.id) return;
 
     const cantidad = sanearEntero(cantidadInput);
@@ -109,15 +150,14 @@ export default function S10_ComprasScreen(): React.ReactNode {
     }
 
     setPlanillaItems(nuevosItems);
-    setBusqueda(''); // Limpiamos la búsqueda tras agregar
+    setBusqueda('');
     setModalVisible(false);
 
-    // Guardar borrador en Firestore
     const nuevoTotal = nuevosItems.reduce((acc, item) => acc + item.subtotal, 0);
     await guardarPlanillaBorrador(nuevosItems, nuevoTotal);
   };
 
-  // 4. Quitar un producto de la planilla
+  // 5. Quitar un producto de la planilla
   const handleQuitarItem = async (productId: string) => {
     const nuevosItems = planillaItems.filter((item) => item.productId !== productId);
     setPlanillaItems(nuevosItems);
@@ -125,40 +165,62 @@ export default function S10_ComprasScreen(): React.ReactNode {
     await guardarPlanillaBorrador(nuevosItems, nuevoTotal);
   };
 
-  // 5. Confirmar las compras e ingresar al stock
-  const handleConfirmarCompra = async () => {
+  // 6. Abrir modal de validación del ticket
+  const handleIniciarConfirmacion = () => {
     if (planillaItems.length === 0) {
-      Alert.alert('Planilla vacía', 'Agregá productos antes de confirmar la compra.');
+      Alert.alert('Planilla vacía', 'Agregá productos antes de ingresar la compra.');
+      return;
+    }
+    setMontoTicketInput(totalCalculado > 0 ? totalCalculado.toString() : '');
+    setModalConfirmacionVisible(true);
+  };
+
+  // 7. Procesar compra
+  const handleEjecutarCompra = async () => {
+    const montoTicket = sanearImporte(montoTicketInput);
+
+    if (montoTicket <= 0) {
+      Alert.alert('Monto inválido', 'Por favor ingresá un total válido del ticket.');
       return;
     }
 
-    Alert.alert(
-      'Confirmar Compra',
-      `¿Deseás ingresar estas unidades al stock por un total de $${totalGasto.toLocaleString('es-AR')}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
+    const diferencia = Math.abs(montoTicket - totalCalculado);
+
+    if (diferencia > 0.01) {
+      const esMayor = montoTicket > totalCalculado;
+      const mensajeDiferencia = `El total ingresado ($${montoTicket.toLocaleString('es-AR')}) es ${
+        esMayor ? 'mayor' : 'menor'
+      } que el calculado en la planilla ($${totalCalculado.toLocaleString('es-AR')}) por una diferencia de $${diferencia.toLocaleString('es-AR')}.\n\n¿Querés registrar el costo real del ticket de todas formas?`;
+
+      Alert.alert('Diferencia de Monto', mensajeDiferencia, [
+        { text: 'Revisar Planilla', style: 'cancel' },
         {
-          text: 'Confirmar y Cargar Stock',
-          onPress: async () => {
-            try {
-              setProcesando(true);
-              await confirmarCompraYSumarStock(planillaItems, totalGasto);
-              Alert.alert('¡Éxito!', 'Los productos fueron sumados al inventario correctamente.');
-              setPlanillaItems([]);
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'No se pudo procesar la compra.');
-            } finally {
-              setProcesando(false);
-            }
-          },
+          text: 'Confirmar con Total Ticket',
+          onPress: () => procesarImpactoStock(montoTicket),
         },
-      ]
-    );
+      ]);
+    } else {
+      await procesarImpactoStock(montoTicket);
+    }
+  };
+
+  const procesarImpactoStock = async (montoFinal: number) => {
+    try {
+      setProcesando(true);
+      await confirmarCompraYSumarStock(planillaItems, montoFinal);
+      setModalConfirmacionVisible(false);
+      Alert.alert('¡Éxito!', 'Los productos fueron sumados al inventario correctamente.');
+      setPlanillaItems([]);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudo procesar la compra.');
+    } finally {
+      setProcesando(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* Buscador de Productos */}
+      {/* Header Buscador + Botón de Historial */}
       <View style={styles.header}>
         <TextInput
           style={styles.inputBuscador}
@@ -167,9 +229,12 @@ export default function S10_ComprasScreen(): React.ReactNode {
           value={busqueda}
           onChangeText={setBusqueda}
         />
+        <TouchableOpacity style={styles.btnHistorialHeader} onPress={abrirHistorial}>
+          <Text style={styles.textoBtnHistorial}>📜 Historial</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Selector de productos desplegable */}
+      {/* Selector desplegable de búsqueda */}
       {cargandoProductos ? (
         <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 10 }} />
       ) : busqueda.trim().length > 0 ? (
@@ -177,7 +242,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
           <FlatList
             data={productosFiltrados}
             keyExtractor={(item) => item.id || Math.random().toString()}
-            keyboardShouldPersistTaps="handled" // 👈 Permite tocar los ítems con el teclado abierto
+            keyboardShouldPersistTaps="handled"
             style={{ maxHeight: 180 }}
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -209,18 +274,28 @@ export default function S10_ComprasScreen(): React.ReactNode {
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
           <View style={styles.cardPlanilla}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
               <Text style={styles.nombreItem}>{item.nombre}</Text>
               <Text style={styles.detalleItem}>
                 {item.cantidad} u. x ${item.precioCosto.toLocaleString('es-AR')} (Costo)
               </Text>
             </View>
 
-            <View style={{ alignItems: 'flex-end', gap: 4 }}>
+            <View style={{ alignItems: 'flex-end', gap: 6 }}>
               <Text style={styles.subtotalItem}>${item.subtotal.toLocaleString('es-AR')}</Text>
-              <TouchableOpacity onPress={() => handleQuitarItem(item.productId)}>
-                <Text style={styles.btnQuitar}>Quitar</Text>
-              </TouchableOpacity>
+
+              <View style={styles.accionesCard}>
+                <TouchableOpacity
+                  style={styles.btnEditar}
+                  onPress={() => abrirModalEditarItem(item)}
+                >
+                  <Text style={styles.textoBtnEditar}>✏️ Editar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => handleQuitarItem(item.productId)}>
+                  <Text style={styles.btnQuitar}>Quitar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         )}
@@ -235,29 +310,27 @@ export default function S10_ComprasScreen(): React.ReactNode {
       {planillaItems.length > 0 && (
         <View style={styles.panelInferior}>
           <View style={styles.resumenTotal}>
-            <Text style={styles.labelTotal}>MONTO TOTAL ESTIMADO</Text>
-            <Text style={styles.montoTotal}>${totalGasto.toLocaleString('es-AR')}</Text>
+            <Text style={styles.labelTotal}>MONTO PLANILLA ESTIMADO</Text>
+            <Text style={styles.montoTotal}>${totalCalculado.toLocaleString('es-AR')}</Text>
           </View>
 
           <TouchableOpacity
             style={styles.botonConfirmar}
-            onPress={handleConfirmarCompra}
+            onPress={handleIniciarConfirmacion}
             disabled={procesando}
           >
-            {procesando ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.textoBotonConfirmar}>Ingresar a Stock y Archivar 🚚</Text>
-            )}
+            <Text style={styles.textoBotonConfirmar}>Ingresar a Stock y Archivar 🚚</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* MODAL PARA EDITAR CANTIDAD Y PRECIO COSTO */}
+      {/* MODAL 1: AGREGAR O EDITAR PRODUCTO EN LA PLANILLA */}
       <Modal visible={modalVisible} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Añadir a Planilla</Text>
+            <Text style={styles.modalTitle}>
+              {esEdicion ? 'Editar en Planilla' : 'Añadir a Planilla'}
+            </Text>
             <Text style={styles.modalSub}>{productoSeleccionado?.nombre}</Text>
 
             <Text style={styles.labelInput}>Cantidad a comprar *</Text>
@@ -288,10 +361,111 @@ export default function S10_ComprasScreen(): React.ReactNode {
                 <Text style={styles.textoBotonCancelar}>Cancelar</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.botonGuardar} onPress={handleAgregarAPlanilla}>
-                <Text style={styles.textoBotonGuardar}>Agregar</Text>
+              <TouchableOpacity style={styles.botonGuardar} onPress={handleGuardarEnPlanilla}>
+                <Text style={styles.textoBotonGuardar}>
+                  {esEdicion ? 'Actualizar' : 'Agregar'}
+                </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL 2: INGRESO Y VALIDACIÓN DEL TICKET REAL */}
+      <Modal visible={modalConfirmacionVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirmar Ingreso de Stock</Text>
+            <Text style={styles.modalSub}>
+              Ingresá el total final que figura en la factura / ticket del mayorista:
+            </Text>
+
+            <Text style={styles.labelInput}>Total abonado ($) *</Text>
+            <TextInput
+              style={styles.inputModal}
+              placeholder="0.00"
+              placeholderTextColor="#A0AEC0"
+              keyboardType="decimal-pad"
+              value={montoTicketInput}
+              onChangeText={setMontoTicketInput}
+            />
+
+            <Text style={styles.infoPlanillaText}>
+              Total según planilla actual: ${totalCalculado.toLocaleString('es-AR')}
+            </Text>
+
+            <View style={styles.modalAcciones}>
+              <TouchableOpacity
+                style={styles.botonCancelar}
+                onPress={() => setModalConfirmacionVisible(false)}
+                disabled={procesando}
+              >
+                <Text style={styles.textoBotonCancelar}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.botonGuardar}
+                onPress={handleEjecutarCompra}
+                disabled={procesando}
+              >
+                {procesando ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.textoBotonGuardar}>Confirmar y Cargar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL 3: HISTORIAL DE PLANILLAS ARCHIVADAS */}
+      <Modal visible={modalHistorialVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <Text style={styles.modalTitle}>📜 Historial de Planillas</Text>
+            <Text style={styles.modalSub}>Registro de compras finalizadas e ingresadas al stock</Text>
+
+            {cargandoHistorial ? (
+              <ActivityIndicator size="large" color="#059669" style={{ marginVertical: 30 }} />
+            ) : (
+              <FlatList
+                data={historialCompras}
+                keyExtractor={(item) => item.id || Math.random().toString()}
+                renderItem={({ item }) => {
+                  const fechaFormat = item.fecha
+                    ? new Date(item.fecha.seconds * 1000).toLocaleString('es-AR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })
+                    : 'Fecha N/A';
+
+                  return (
+                    <View style={styles.cardHistorial}>
+                      <View>
+                        <Text style={styles.fechaHistorial}>Planilla - {fechaFormat}</Text>
+                        <Text style={styles.itemsHistorialCount}>
+                          {item.items?.length || 0} productos comprados
+                        </Text>
+                      </View>
+                      <Text style={styles.totalHistorial}>
+                        ${(item.montoTotal || 0).toLocaleString('es-AR')}
+                      </Text>
+                    </View>
+                  );
+                }}
+                ListEmptyComponent={
+                  <Text style={styles.textoVacio}>No hay planillas archivadas aún.</Text>
+                }
+              />
+            )}
+
+            <TouchableOpacity
+              style={[styles.botonCancelar, { marginTop: 16, alignItems: 'center' }]}
+              onPress={() => setModalHistorialVisible(false)}
+            >
+              <Text style={styles.textoBotonCancelar}>Cerrar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -301,8 +475,17 @@ export default function S10_ComprasScreen(): React.ReactNode {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F2F4F7' },
-  header: { padding: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  header: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
   inputBuscador: {
+    flex: 1,
     height: 44,
     backgroundColor: '#F3F4F6',
     borderRadius: 8,
@@ -310,6 +493,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1F2937',
   },
+  btnHistorialHeader: {
+    backgroundColor: '#3B82F6',
+    height: 44,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textoBtnHistorial: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 13 },
   resultadosContenedor: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
@@ -348,8 +540,11 @@ const styles = StyleSheet.create({
   nombreItem: { fontSize: 15, fontWeight: '600', color: '#1F2937' },
   detalleItem: { fontSize: 12, color: '#6B7280', marginTop: 2 },
   subtotalItem: { fontSize: 15, fontWeight: 'bold', color: '#059669' },
+  accionesCard: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  btnEditar: { backgroundColor: '#E0F2FE', paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
+  textoBtnEditar: { fontSize: 11, color: '#0284C7', fontWeight: '600' },
   btnQuitar: { fontSize: 12, color: '#EF4444', fontWeight: 'bold' },
-  textoVacio: { textAlign: 'center', color: '#888', marginTop: 40, fontSize: 14, paddingHorizontal: 20 },
+  textoVacio: { textAlign: 'center', color: '#888', marginTop: 30, fontSize: 14, paddingHorizontal: 20 },
 
   panelInferior: {
     position: 'absolute',
@@ -374,7 +569,7 @@ const styles = StyleSheet.create({
   },
   textoBotonConfirmar: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
 
-  // Modal
+  // Modales
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
   modalContent: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 20 },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937' },
@@ -390,9 +585,26 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#1F2937',
   },
+  infoPlanillaText: { fontSize: 12, color: '#6B7280', fontStyle: 'italic', marginBottom: 16 },
   modalAcciones: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
   botonCancelar: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#E5E7EB' },
   textoBotonCancelar: { color: '#374151', fontWeight: '600' },
   botonGuardar: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: '#059669' },
   textoBotonGuardar: { color: '#FFFFFF', fontWeight: 'bold' },
+
+  // Historial
+  cardHistorial: {
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  fechaHistorial: { fontSize: 14, fontWeight: 'bold', color: '#1F2937' },
+  itemsHistorialCount: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  totalHistorial: { fontSize: 16, fontWeight: 'bold', color: '#059669' },
 });
