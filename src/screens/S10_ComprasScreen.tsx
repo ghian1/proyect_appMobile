@@ -11,7 +11,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Producto, suscribirAProductos } from '../services/productService';
+import { suscribirAProductos, Producto } from '../services/productService';
 import {
   ItemCompra,
   obtenerPlanillaBorrador,
@@ -37,10 +37,16 @@ export default function S10_ComprasScreen(): React.ReactNode {
 
   // 1. Cargar productos y recuperar el borrador si existía
   useEffect(() => {
-    const unsubscribe = suscribirAProductos((data) => {
-      setProductos(data);
-      setCargandoProductos(false);
-    });
+    const unsubscribe = suscribirAProductos(
+      (data) => {
+        setProductos(data);
+        setCargandoProductos(false);
+      },
+      (error) => {
+        console.error('Error cargando productos para compras:', error);
+        setCargandoProductos(false);
+      }
+    );
 
     // Recuperar la planilla en borrador si el usuario había dejado una armada
     obtenerPlanillaBorrador().then((borrador) => {
@@ -53,7 +59,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
   }, []);
 
   const productosFiltrados = productos.filter((p) =>
-    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    p.nombre ? p.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()) : false
   );
 
   const totalGasto = planillaItems.reduce((acc, item) => acc + item.subtotal, 0);
@@ -62,7 +68,6 @@ export default function S10_ComprasScreen(): React.ReactNode {
   const abrirModalProducto = (prod: Producto) => {
     setProductoSeleccionado(prod);
     setCantidadInput('');
-    // Si el producto ya tiene precioCosto guardado, se precarga
     setPrecioCostoInput(prod.precioCosto ? prod.precioCosto.toString() : '');
     setModalVisible(true);
   };
@@ -104,9 +109,10 @@ export default function S10_ComprasScreen(): React.ReactNode {
     }
 
     setPlanillaItems(nuevosItems);
+    setBusqueda(''); // Limpiamos la búsqueda tras agregar
     setModalVisible(false);
 
-    // Guardar borrador en Firestore para no perder los datos al cerrar la app
+    // Guardar borrador en Firestore
     const nuevoTotal = nuevosItems.reduce((acc, item) => acc + item.subtotal, 0);
     await guardarPlanillaBorrador(nuevosItems, nuevoTotal);
   };
@@ -152,26 +158,27 @@ export default function S10_ComprasScreen(): React.ReactNode {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* Buscador de Productos del Almacén */}
+      {/* Buscador de Productos */}
       <View style={styles.header}>
         <TextInput
           style={styles.inputBuscador}
-          placeholder="Buscar producto para pedir a proveedor..."
+          placeholder="Escribí para buscar un producto..."
           placeholderTextColor="#888"
           value={busqueda}
           onChangeText={setBusqueda}
         />
       </View>
 
-      {/* Selector de productos */}
+      {/* Selector de productos desplegable */}
       {cargandoProductos ? (
         <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 10 }} />
-      ) : busqueda.length > 0 ? (
+      ) : busqueda.trim().length > 0 ? (
         <View style={styles.resultadosContenedor}>
           <FlatList
             data={productosFiltrados}
             keyExtractor={(item) => item.id || Math.random().toString()}
-            style={{ maxHeight: 150 }}
+            keyboardShouldPersistTaps="handled" // 👈 Permite tocar los ítems con el teclado abierto
+            style={{ maxHeight: 180 }}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.itemBusqueda}
@@ -181,6 +188,11 @@ export default function S10_ComprasScreen(): React.ReactNode {
                 <Text style={styles.stockProdBusqueda}>Stock actual: {item.stock || 0} u.</Text>
               </TouchableOpacity>
             )}
+            ListEmptyComponent={
+              <Text style={styles.textoNoResultado}>
+                No se encontraron productos con ese nombre.
+              </Text>
+            }
           />
         </View>
       ) : null}
@@ -194,6 +206,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
         data={planillaItems}
         keyExtractor={(item) => item.productId}
         contentContainerStyle={styles.listaPlanilla}
+        keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
           <View style={styles.cardPlanilla}>
             <View style={{ flex: 1 }}>
@@ -213,12 +226,12 @@ export default function S10_ComprasScreen(): React.ReactNode {
         )}
         ListEmptyComponent={
           <Text style={styles.textoVacio}>
-            La planilla está vacía. Buscá productos arriba para armar tu pedido de reposición.
+            La planilla está vacía. Escribí el nombre de un producto en el buscador de arriba para comenzar a armar el pedido.
           </Text>
         }
       />
 
-      {/* PANEL INFERIOR DE RESUMEN Y CONFIRMACIÓN */}
+      {/* PANEL INFERIOR DE TOTAL Y CONFIRMACIÓN */}
       {planillaItems.length > 0 && (
         <View style={styles.panelInferior}>
           <View style={styles.resumenTotal}>
@@ -240,7 +253,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
         </View>
       )}
 
-      {/* MODAL EDITAR CANTIDAD Y PRECIO COSTO */}
+      {/* MODAL PARA EDITAR CANTIDAD Y PRECIO COSTO */}
       <Modal visible={modalVisible} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -295,13 +308,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 14,
+    color: '#1F2937',
   },
   resultadosContenedor: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
     borderRadius: 8,
-    elevation: 3,
-    maxHeight: 150,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    zIndex: 10,
   },
   itemBusqueda: {
     padding: 12,
@@ -309,9 +326,11 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   nombreProdBusqueda: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
   stockProdBusqueda: { fontSize: 12, color: '#6B7280' },
+  textoNoResultado: { padding: 14, color: '#888', textAlign: 'center', fontSize: 13 },
 
   planillaHeader: { paddingHorizontal: 16, paddingTop: 16 },
   tituloPlanilla: { fontSize: 16, fontWeight: 'bold', color: '#1F2937' },
@@ -330,7 +349,7 @@ const styles = StyleSheet.create({
   detalleItem: { fontSize: 12, color: '#6B7280', marginTop: 2 },
   subtotalItem: { fontSize: 15, fontWeight: 'bold', color: '#059669' },
   btnQuitar: { fontSize: 12, color: '#EF4444', fontWeight: 'bold' },
-  textoVacio: { textAlign: 'center', color: '#888', marginTop: 40, fontSize: 14 },
+  textoVacio: { textAlign: 'center', color: '#888', marginTop: 40, fontSize: 14, paddingHorizontal: 20 },
 
   panelInferior: {
     position: 'absolute',
@@ -369,6 +388,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
     marginBottom: 16,
+    color: '#1F2937',
   },
   modalAcciones: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
   botonCancelar: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#E5E7EB' },

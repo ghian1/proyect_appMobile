@@ -18,6 +18,7 @@ import {
   subscribeToClientesFiados,
   crearClienteFiado,
   registrarMovimientoFiado,
+  eliminarClienteFiado, 
   ClienteFiado,
 } from '../services/fiadoService';
 import { sanearImporte } from '../utils/sanitizers';
@@ -55,6 +56,34 @@ export default function S08_FiadosScreen(): React.ReactNode {
     c.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
 
+  // Confirmación y eliminación de cliente
+  const handleEliminarCliente = (cliente: ClienteFiado) => {
+    if (!cliente.id) return;
+
+    const mensajeAdvertencia =
+      cliente.deudaTotal > 0
+        ? `¡Atención! ${cliente.nombre} tiene una deuda pendiente de $${cliente.deudaTotal.toLocaleString(
+            'es-AR'
+          )}. ¿Querés eliminarlo de todas formas?`
+        : `¿Estás seguro de que querés eliminar a ${cliente.nombre} de la libreta de fiados?`;
+
+    Alert.alert('Eliminar Cliente', mensajeAdvertencia, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await eliminarClienteFiado(cliente.id!);
+            Alert.alert('Eliminado', 'El cliente fue removido de la libreta.');
+          } catch (error) {
+            Alert.alert('Error', 'No se pudo eliminar el cliente.');
+          }
+        },
+      },
+    ]);
+  };
+
   // 1. Resetear y Guardar Nuevo Cliente
   const resetFormCliente = () => {
     setNombre('');
@@ -73,8 +102,8 @@ export default function S08_FiadosScreen(): React.ReactNode {
       setGuardandoCliente(true);
       await crearClienteFiado({
         nombre: nombre.trim(),
-        telefono: telefono.trim() ? telefono.trim() : '', // Evitamos valores undefined
-        notas: notas.trim() ? notas.trim() : '', // Previene crash si no pones descripción
+        telefono: telefono.trim() ? telefono.trim() : '',
+        notas: notas.trim() ? notas.trim() : '',
       });
 
       Alert.alert('¡Éxito!', 'Cliente registrado correctamente.');
@@ -96,7 +125,6 @@ export default function S08_FiadosScreen(): React.ReactNode {
   };
 
   const handleProcesarSaldo = async () => {
-    //sanitizer para el monto de los fiados
     const montoNum = sanearImporte(monto);
 
     if (isNaN(montoNum) || montoNum <= 0) {
@@ -108,7 +136,6 @@ export default function S08_FiadosScreen(): React.ReactNode {
 
     try {
       setProcesandoSaldo(true);
-      // Asignamos una descripción por defecto si queda vacía
       const conceptoValido = concepto.trim()
         ? concepto.trim()
         : tipoMovimiento === 'FIADO'
@@ -125,8 +152,8 @@ export default function S08_FiadosScreen(): React.ReactNode {
       Alert.alert(
         '¡Éxito!',
         tipoMovimiento === 'FIADO'
-          ? `Se sumaron $${montoNum} a la deuda de ${clienteSeleccionado.nombre}`
-          : `Se descontaron $${montoNum} de la deuda de ${clienteSeleccionado.nombre}`
+          ? `Se sumaron $${montoNum.toLocaleString('es-AR')} a la deuda de ${clienteSeleccionado.nombre}`
+          : `Se descontaron $${montoNum.toLocaleString('es-AR')} de la deuda de ${clienteSeleccionado.nombre}`
       );
       setModalSaldoVisible(false);
     } catch (error) {
@@ -139,7 +166,18 @@ export default function S08_FiadosScreen(): React.ReactNode {
   const renderItem = ({ item }: { item: ClienteFiado }) => (
     <View style={styles.cardCliente}>
       <View style={styles.infoCliente}>
-        <Text style={styles.nombreCliente}>{item.nombre}</Text>
+        <View style={styles.headerInfoCliente}>
+          <Text style={styles.nombreCliente}>{item.nombre}</Text>
+          {/* Botón rápido para eliminar cliente */}
+          <TouchableOpacity
+            style={styles.btnEliminar}
+            onPress={() => handleEliminarCliente(item)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.textoBtnEliminar}>🗑️</Text>
+          </TouchableOpacity>
+        </View>
+
         {item.telefono ? (
           <Text style={styles.telefonoCliente}>📞 {item.telefono}</Text>
         ) : null}
@@ -161,7 +199,6 @@ export default function S08_FiadosScreen(): React.ReactNode {
           ${item.deudaTotal.toLocaleString('es-AR')}
         </Text>
 
-        {/* Botones rápidos para Sumar (+) o Descontar (-) */}
         <View style={styles.botonesAccion}>
           <TouchableOpacity
             style={[styles.btnMini, styles.btnRestar]}
@@ -183,7 +220,6 @@ export default function S08_FiadosScreen(): React.ReactNode {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* Header y buscador */}
       <View style={styles.header}>
         <TextInput
           style={styles.inputBuscador}
@@ -399,7 +435,14 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   infoCliente: { flex: 1, paddingRight: 10 },
+  headerInfoCliente: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   nombreCliente: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
+  btnEliminar: { padding: 2 },
+  textoBtnEliminar: { fontSize: 14 },
   telefonoCliente: { fontSize: 12, color: '#666', marginTop: 4 },
   notasCliente: { fontSize: 12, color: '#888', marginTop: 2, fontStyle: 'italic' },
   derechaContainer: { alignItems: 'flex-end' },

@@ -1,5 +1,3 @@
-
-
 import { useState } from 'react';
 import {
     ActivityIndicator, //Componente para definir estilos en la pantalla
