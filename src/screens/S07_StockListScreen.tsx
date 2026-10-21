@@ -54,7 +54,6 @@ export function S07_StockListScreen() {
         .toLowerCase()
         .includes(busqueda.toLowerCase().trim());
 
-      // [NUEVO] Comprueba si la categoría seleccionada está adentro del array 'categorias' o en el campo singular 'categoria'
       const coincideCategoria =
         categoriaSeleccionada === 'Todas' ||
         (Array.isArray(item.categorias) &&
@@ -67,6 +66,7 @@ export function S07_StockListScreen() {
     });
   }, [productos, busqueda, categoriaSeleccionada]);
 
+  // Renderizado de tarjeta vertical en formato de tarjeta/grilla
   const renderProducto = ({ item }: { item: Producto }) => {
     const sinStock = item.stock <= 0; //nos fijamos que el producto tenga stock.
 
@@ -81,14 +81,19 @@ export function S07_StockListScreen() {
         }}
       >
         {/* renderiza la información del producto, incluyendo el nombre, la categoría y el precio. */}
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardTitulo}>{item.nombre}</Text>
-          <Text style={styles.cardCategoria}> 
+        <View style={styles.cardContenido}>
+          {/*Limitamos el título a 2 renglones con numberOfLines={2} */}
+          <Text style={styles.cardTitulo} numberOfLines={2}>
+            {item.nombre}
+          </Text>
+
+          {/* [NUEVO - GRID 2 COLUMNAS] Formateamos todas las categorías del producto unidas con puntos */}
+          <Text style={styles.cardCategoria} numberOfLines={1}>
             {Array.isArray(item.categorias) && item.categorias.length > 0
               ? item.categorias.join(' • ')
-              : item.categoria || 'Almacén'} 
-              {/* Si el producto tiene categorías, las mostramos separadas por " • ". Si no tiene categorías, mostramos la categoría singular o "Almacén" como fallback. */}
+              : item.categoria || 'Almacén'}
           </Text>
+
           <Text style={styles.cardPrecio}>${item.precio.toFixed(2)}</Text>
         </View>
 
@@ -171,11 +176,15 @@ export function S07_StockListScreen() {
           <Text style={styles.textoCargando}>Sincronizando inventario...</Text>
         </View>
       ) : (
+        
         <FlatList
           data={productosFiltrados}
+          key="grilla_stock_2_col"
+          numColumns={2}
           keyExtractor={(item) => item.id || Math.random().toString()}
           renderItem={renderProducto}
           contentContainerStyle={styles.listaProductos}
+          columnWrapperStyle={styles.filaGrid}
           ListEmptyComponent={
             <View style={styles.centrado}>
               <Text style={styles.textoVacio}>
@@ -261,51 +270,58 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listaProductos: {
-    padding: 16,
-    gap: 10,
+    padding: 12,
+    paddingBottom: 20,
   },
+  //Distribucion proporcional para cada par de tarjetas por fila
+  filaGrid: {
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  //Rediseño de tarjeta en formato caja rectangular(cambiamos las tarjetas para que tengan un diseño más moderno y limpio, con bordes redondeados y sombra sutil)
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 14,
-    flexDirection: 'row',
+    padding: 12,
+    width: '48.5%',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    minHeight: 135,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2.2,
     elevation: 2,
-    marginBottom: 8,
   },
-  cardInfo: {
+  cardContenido: {
     flex: 1,
-    marginRight: 12,
   },
   cardTitulo: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#1C1C1E',
-    marginBottom: 2,
+    marginBottom: 4,
+    lineHeight: 19,
   },
   cardCategoria: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#8E8E93',
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   cardPrecio: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#34C759',
+    marginBottom: 8,
   },
   cardStockContainer: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
+    marginTop: 'auto',
   },
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   badgeConStock: {
     backgroundColor: '#E8F5E9',
@@ -314,7 +330,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFEBEE',
   },
   badgeTexto: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   textoConStock: {
