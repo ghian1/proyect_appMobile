@@ -11,6 +11,8 @@ import { S06_PerfilScreen } from '../screens/S06_PerfilScreen';
 import { MainTabParamList, RootStackParamList } from '../types/navigation';
 import FiadosNavigator from './FiadosNavigator';
 import StockNavigator from './StockNavigator';
+//Importamos el navegador real del módulo de Ventas
+import VentasNavigator from './VentasNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -50,10 +52,10 @@ export default function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="StockFlow" component={StockNavigator} />
+      {/* Reemplazamos VentasPlaceholder por VentasNavigator */}
       <Stack.Screen 
         name="VentasFlow" 
-        component={VentasPlaceholder} 
-        options={{ headerShown: true, title: 'Ventas' }} 
+        component={VentasNavigator} 
       />
       <Stack.Screen 
         name="FiadosFlow" 
@@ -69,7 +71,7 @@ export default function AppNavigator() {
   );
 }
 
-// Estilos para los placeholders pendientes
+// Estilos para los placeholders pendientes(compras unicamente ahora ya que terminamos ventas)
 const styles = StyleSheet.create({
   center: {
     flex: 1,
@@ -91,15 +93,7 @@ const styles = StyleSheet.create({
 });
 
 // Módulos que todavía no desarrollamos
-function VentasPlaceholder() {
-  return (
-    <View style={styles.center}>
-      <Text style={styles.title}>Módulo de Ventas</Text>
-      <Text style={styles.subtitle}>En desarrollo...</Text>
-    </View>
-  );
-}
-
+//Eliminamos VentasPlaceholder ya que el modulo de ventas fue implementado
 function ComprasPlaceholder() {
   return (
     <View style={styles.center}>
