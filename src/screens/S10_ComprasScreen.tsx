@@ -20,7 +20,7 @@ import {
 } from '../services/compraService';
 import { sanearEntero, sanearImporte } from '../utils/sanitizers';
 
-export default function S11_ComprasScreen(): React.ReactNode {
+export default function S10_ComprasScreen(): React.ReactNode {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [cargandoProductos, setCargandoProductos] = useState(true);
