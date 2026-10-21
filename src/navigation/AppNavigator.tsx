@@ -13,6 +13,8 @@ import FiadosNavigator from './FiadosNavigator';
 import StockNavigator from './StockNavigator';
 //Importamos el navegador real del módulo de Ventas
 import VentasNavigator from './VentasNavigator';
+//Importamos el navegador real del módulo de Compras
+import ComprasNavigator from './ComprasNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -66,6 +68,11 @@ export default function AppNavigator() {
         name="ComprasFlow" 
         component={ComprasPlaceholder} 
         options={{ headerShown: true, title: 'Compras' }} 
+      />
+      <Stack.Screen
+        name="ComprasFlow"
+        component={ComprasNavigator}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
