@@ -1,11 +1,12 @@
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker'; //Librería para acceder al hardware de la cámara
-import { useEffect, useState } from 'react'; //Importamos useEffect para ejecutar código al abrir la pantalla
+import * as ImagePicker from 'expo-image-picker';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image, //Importamos Image para mostrar la foto en pantalla 
+  Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,45 +16,59 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-//Importamos obtenerProductoPorId junto a crear y actualizar
-import { actualizarProducto, crearProducto, obtenerProductoPorId } from '../services/productService';
+import {
+  actualizarProducto,
+  crearCategoriaBD,
+  crearProducto,
+  obtenerProductoPorId,
+  suscribirACategorias
+} from '../services/productService';
 import { StockStackParamList } from '../types/navigation';
-import { sanearEntero, sanearImporte } from '../utils/sanitizers'; //usamos los sanear que creamos
+import { sanearEntero, sanearImporte } from '../utils/sanitizers';
 
 type ScreenRouteProp = RouteProp<StockStackParamList, 'ProductEdit'>;
 type ScreenNavProp = NativeStackNavigationProp<StockStackParamList, 'ProductEdit'>;
-
-const CATEGORIAS_DISPONIBLES = ['Comestibles', 'Bebidas', 'Limpieza', 'Almacén'];
 
 export function S05_AltaEditarScreen() {
   const navigation = useNavigation<ScreenNavProp>();
   const route = useRoute<ScreenRouteProp>();
 
-  //comprobamos si estamos en modo edición o creación de un producto, dependiendo de si se pasa un productId como parámetro de la ruta.
   const productId = route.params?.productId;
   const esEdicion = Boolean(productId);
 
-  //constantes de estado para los campos del formulario
   const [nombre, setNombre] = useState<string>('');
-  // [NUEVO] El estado ahora almacena un array de strings para permitir varias categorías
   const [categorias, setCategorias] = useState<string[]>(['Almacén']);
+  const [listaCategorias, setListaCategorias] = useState<string[]>(['Comestibles', 'Bebidas', 'Limpieza', 'Almacén']);
+
+  const [modalCatVisible, setModalCatVisible] = useState<boolean>(false);
+  const [nuevaCatTexto, setNuevaCatTexto] = useState<string>('');
+
   const [precioTexto, setPrecioTexto] = useState<string>('');
   const [stockTexto, setStockTexto] = useState<string>('');
   const [descripcion, setDescripcion] = useState<string>('');
   const [guardando, setGuardando] = useState<boolean>(false);
-  
-  //Estado para saber si estamos cargando los datos iniciales desde Firestore
   const [cargandoInicial, setCargandoInicial] = useState<boolean>(false);
-
-  //Estado para guardar la ruta temporal de la foto en el celular (o null si no hay foto)
   const [imagenUri, setImagenUri] = useState<string | null>(null);
 
-  //Efecto que recupera los datos del producto si estamos en modo edición
+  // Suscripción a categorías de Firestore
+  useEffect(() => {
+    const desuscribirCats = suscribirACategorias((cats: string[]) => {
+      // [FILTRO] Excluimos filtros de estado calculados para que NO se asignen a productos
+      const categoriasValidasParaElegir = cats.filter(
+        (c: string) => c !== 'Todas' && c !== 'Stock Crítico' && c !== 'Sin Stock'
+      );
+      setListaCategorias(categoriasValidasParaElegir);
+    });
+
+    return () => {
+      if (desuscribirCats) desuscribirCats();
+    };
+  }, []);
+  
   useEffect(() => {
     let activo = true;
 
     const hidratarFormulario = async () => {
-      // Si no es edición o no hay productId, no hacemos nada (queda todo vacío para producto nuevo)
       if (!esEdicion || !productId) return;
 
       try {
@@ -61,10 +76,8 @@ export function S05_AltaEditarScreen() {
         const productoEncontrado = await obtenerProductoPorId(productId);
 
         if (productoEncontrado && activo) {
-          // Poblamos cada estado local con los datos reales de Firestore
           setNombre(productoEncontrado.nombre || '');
 
-          // [NUEVO] Hidratamos las categorías: si ya es array usamos ese, si es el string viejo lo metemos en array
           if (Array.isArray(productoEncontrado.categorias) && productoEncontrado.categorias.length > 0) {
             setCategorias(productoEncontrado.categorias);
           } else if (productoEncontrado.categoria) {
@@ -94,32 +107,48 @@ export function S05_AltaEditarScreen() {
 
     hidratarFormulario();
 
-    // Función de limpieza por si el usuario sale de la pantalla antes de que termine la consulta
     return () => {
       activo = false;
     };
   }, [productId, esEdicion]);
 
-  // [NUEVO] Alterna la selección de una categoría (agregar o quitar de la lista)
   const toggleCategoria = (cat: string) => {
     if (categorias.includes(cat)) {
-      // Si ya está seleccionada y hay más de una, la quitamos
       if (categorias.length > 1) {
         setCategorias(categorias.filter((item) => item !== cat));
       } else {
-        // Regla: no dejar el producto sin ninguna categoría asignada
         Alert.alert('Validación', 'El producto debe pertenecer al menos a una categoría.');
       }
     } else {
-      // Si no estaba en la lista, la agregamos
       setCategorias([...categorias, cat]);
     }
   };
 
-  //Función que solicita permisos y abre la cámara nativa del celular
+  //Guardado persistente de nueva categoría en Firestore
+  const handleConfirmarNuevaCategoria = async () => {
+    if (!nuevaCatTexto.trim()) {
+      Alert.alert('Atención', 'Ingresá un nombre para la categoría.');
+      return;
+    }
+
+    const textoLimpio = nuevaCatTexto.trim();
+    const formateada = textoLimpio.charAt(0).toUpperCase() + textoLimpio.slice(1);
+
+    try {
+      if (!listaCategorias.includes(formateada)) {
+        await crearCategoriaBD(formateada);
+        setCategorias([...categorias, formateada]);
+      }
+      setNuevaCatTexto('');
+      setModalCatVisible(false);
+    } catch (error) {
+      console.error('Error al guardar categoría:', error);
+      Alert.alert('Error', 'No se pudo guardar la categoría.');
+    }
+  };
+
   const tomarFotoConCamara = async () => {
     try {
-      //Pedir permisos de cámara (se abre el modal de Android/iOS)
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
 
       if (status !== 'granted') {
@@ -130,14 +159,12 @@ export function S05_AltaEditarScreen() {
         return;
       }
 
-      //Disparar la cámara del sistema operativo
       const resultado = await ImagePicker.launchCameraAsync({
-        allowsEditing: true, // Le deja a la comerciante recortar la foto
-        aspect: [1, 1],      // Forzamos formato cuadrado (1 a 1) para el catálogo
-        quality: 0.5,        // Comprime al 50% para que la app responda rápido y no gaste datos
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
       });
 
-      //Si no tocó cancelar, guardamos la dirección de la foto
       if (!resultado.canceled && resultado.assets && resultado.assets.length > 0) {
         setImagenUri(resultado.assets[0].uri);
       }
@@ -153,21 +180,17 @@ export function S05_AltaEditarScreen() {
       return;
     }
 
-    // [NUEVO] Comprobamos que al menos una categoría esté elegida
     if (categorias.length === 0) {
       Alert.alert('Validación', 'Seleccioná al menos una categoría.');
       return;
     }
 
-    //Usamos los saneamientos que creamos
     const precioFinal = sanearImporte(precioTexto);
     const stockFinal = sanearEntero(stockTexto);
 
-    //manejo de errores
     try {
       setGuardando(true);
 
-      //Armamos el payload enviando 'categorias' como array y 'categoria' para retrocompatibilidad
       const payload = {
         nombre,
         categorias,
@@ -175,7 +198,7 @@ export function S05_AltaEditarScreen() {
         precio: precioFinal,
         stock: stockFinal,
         descripcion,
-        imagenUrl: imagenUri || null, //Persistimos la foto o null si no hay foto. Importante hacer el contrato en el servicio para que acepte null, sino tira error de tipado
+        imagenUrl: imagenUri || null,
       };
 
       if (esEdicion && productId) {
@@ -197,7 +220,6 @@ export function S05_AltaEditarScreen() {
     }
   };
 
-  //Si está recuperando los datos del producto, mostramos un spinner de carga
   if (cargandoInicial) {
     return (
       <SafeAreaView style={[styles.contenedor, styles.centroCarga]}>
@@ -214,7 +236,6 @@ export function S05_AltaEditarScreen() {
           {esEdicion ? 'Editar Mercadería' : 'Nueva Mercadería'}
         </Text>
 
-        {/* SECCIÓN VISUAL PARA SACAR Y PREVISUALIZAR LA FOTO */}
         <View style={styles.seccionFoto}>
           {imagenUri ? (
             <Image source={{ uri: imagenUri }} style={styles.fotoPreview} />
@@ -255,12 +276,10 @@ export function S05_AltaEditarScreen() {
           />
         </View>
 
-        {/*Sección de categorías con selección múltiple interactiva */}
         <View style={styles.campo}>
           <Text style={styles.label}>Categorías (podés elegir varias)</Text>
           <View style={styles.categoriasContenedor}>
-            {CATEGORIAS_DISPONIBLES.map((cat) => {
-              // [NUEVO] Comprobamos si esta categoría puntual está dentro del array 'categorias'
+            {listaCategorias.map((cat) => {
               const seleccionada = categorias.includes(cat);
               return (
                 <TouchableOpacity
@@ -275,12 +294,19 @@ export function S05_AltaEditarScreen() {
                       seleccionada ? styles.chipTextoSeleccionado : null,
                     ]}
                   >
-                    {/* [NUEVO] Si está seleccionada le agrega el tilde al lado del nombre */}
                     {cat} {seleccionada ? '✓' : ''}
                   </Text>
                 </TouchableOpacity>
               );
             })}
+
+            <TouchableOpacity
+              style={styles.chipAgregarCategoria}
+              onPress={() => setModalCatVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.textoAgregarCategoria}>+ Nueva Categoría</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -337,6 +363,43 @@ export function S05_AltaEditarScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal visible={modalCatVisible} animationType="fade" transparent>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalContenido}>
+            <Text style={styles.modalTitulo}>Nueva Categoría</Text>
+            <Text style={styles.modalSubtitulo}>Ingresá el nombre del nuevo rubro:</Text>
+
+            <TextInput
+              style={styles.inputModal}
+              placeholder="Ej: Golosinas, Fiambres..."
+              placeholderTextColor="#8E8E93"
+              value={nuevaCatTexto}
+              onChangeText={setNuevaCatTexto}
+              autoFocus
+            />
+
+            <View style={styles.modalBotones}>
+              <TouchableOpacity
+                style={styles.botonModalCancelar}
+                onPress={() => {
+                  setNuevaCatTexto('');
+                  setModalCatVisible(false);
+                }}
+              >
+                <Text style={styles.textoModalCancelar}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.botonModalAgregar}
+                onPress={handleConfirmarNuevaCategoria}
+              >
+                <Text style={styles.textoModalAgregar}>Agregar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -346,7 +409,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F2F4F7',
   },
-  //Estilos para el estado de carga
   centroCarga: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -365,7 +427,6 @@ const styles = StyleSheet.create({
     color: '#1C1C1E',
     marginBottom: 20,
   },
-  //Estilos de la tarjeta visual de foto
   seccionFoto: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,7 +464,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   botonCamara: {
-    backgroundColor: '#34C759', // Verde iOS prolijo para la acción de foto
+    backgroundColor: '#34C759',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 8,
@@ -423,7 +484,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  // Fin de estilos nuevos de cámara
   campo: {
     marginBottom: 16,
   },
@@ -477,6 +537,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
+  chipAgregarCategoria: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#34C759',
+    borderStyle: 'dashed',
+  },
+  textoAgregarCategoria: {
+    fontSize: 13,
+    color: '#2E7D32',
+    fontWeight: '600',
+  },
   botonGuardar: {
     backgroundColor: '#007AFF',
     paddingVertical: 14,
@@ -490,6 +564,65 @@ const styles = StyleSheet.create({
   textoBotonGuardar: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalFondo: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContenido: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 20,
+    elevation: 5,
+  },
+  modalTitulo: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1C1C1E',
+    marginBottom: 4,
+  },
+  modalSubtitulo: {
+    fontSize: 13,
+    color: '#8E8E93',
+    marginBottom: 16,
+  },
+  inputModal: {
+    backgroundColor: '#F2F4F7',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#1C1C1E',
+    marginBottom: 16,
+  },
+  modalBotones: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  botonModalCancelar: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#E5E5EA',
+  },
+  textoModalCancelar: {
+    color: '#3A3A3C',
+    fontWeight: '600',
+  },
+  botonModalAgregar: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#34C759',
+  },
+  textoModalAgregar: {
+    color: '#FFFFFF',
     fontWeight: 'bold',
   },
 });

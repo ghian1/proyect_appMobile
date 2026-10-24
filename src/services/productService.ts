@@ -30,8 +30,6 @@ export interface Producto {
 
 export type NuevoProductoInput = Omit<Producto, "id" | "creadoEn" | "actualizadoEn">;
 
-
-
 // 1. Escuchar la lista completa de productos en tiempo real (S02 y S07)
 export function suscribirAProductos(
   onData: (productos: Producto[]) => void,
@@ -91,8 +89,6 @@ export async function crearProducto(datos: NuevoProductoInput): Promise<string> 
     throw new Error("El stock no puede ser negativo (Invariante I-04).");
   }
 
-
-
   // Normalizamos: si viene el array de categorías lo usamos, si viene una sola la metemos en array
   const categoriasFinales = datos.categorias && datos.categorias.length > 0 
     ? datos.categorias 
@@ -141,3 +137,36 @@ export async function actualizarProducto(
 
   await updateDoc(docRef, payload);
 }
+
+//Categorías por defecto para la barra de filtros superiores
+export const CATEGORIAS_BASE = ['Todas', 'Stock Crítico', 'Sin Stock', 'Comestibles', 'Bebidas', 'Limpieza', 'Almacén'];
+
+// Suscripción en tiempo real a la colección de categorías en Firestore
+export const suscribirACategorias = (
+  onUpdate: (categorias: string[]) => void,
+  onError?: (error: Error) => void
+) => {
+  const ref = collection(db, 'categorias');
+  return onSnapshot(
+    query(ref),
+    (snapshot) => {
+      const catsGuardadas = snapshot.docs.map((docSnap) => docSnap.data().nombre as string);
+      const listaUnificada = Array.from(new Set([...CATEGORIAS_BASE, ...catsGuardadas]));
+      onUpdate(listaUnificada);
+    },
+    (error) => {
+      console.error("Error en listener de categorías:", error);
+      if (onError) onError(error);
+    }
+  );
+};
+
+//Guardar una categoría nueva creada por el comerciante en Firestore
+export const crearCategoriaBD = async (nombre: string): Promise<void> => {
+  if (!nombre || !nombre.trim()) return;
+  const ref = collection(db, 'categorias');
+  await addDoc(ref, { 
+    nombre: nombre.trim(),
+    creadoEn: serverTimestamp() 
+  });
+};

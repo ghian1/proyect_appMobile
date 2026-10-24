@@ -1,6 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StyleSheet, Text, View } from 'react-native';
 
 // Pantallas de las solapas inferiores
 import { S02_StockHomeScreen } from '../screens/S02_StockHomeScreen';
@@ -9,12 +8,12 @@ import { S06_PerfilScreen } from '../screens/S06_PerfilScreen';
 
 // Tipados y navegadores anidados
 import { MainTabParamList, RootStackParamList } from '../types/navigation';
+// Importamos el navegador real del módulo de Compras
+import ComprasNavigator from './ComprasNavigator';
 import FiadosNavigator from './FiadosNavigator';
 import StockNavigator from './StockNavigator';
-//Importamos el navegador real del módulo de Ventas
+// Importamos el navegador real del módulo de Ventas
 import VentasNavigator from './VentasNavigator';
-//Importamos el navegador real del módulo de Compras
-import ComprasNavigator from './ComprasNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -66,46 +65,9 @@ export default function AppNavigator() {
       />
       <Stack.Screen 
         name="ComprasFlow" 
-        component={ComprasPlaceholder} 
-        options={{ headerShown: true, title: 'Compras' }} 
-      />
-      <Stack.Screen
-        name="ComprasFlow"
-        component={ComprasNavigator}
-        options={{ headerShown: false }}
+        component={ComprasNavigator} 
+        options={{ headerShown: false }} 
       />
     </Stack.Navigator>
-  );
-}
-
-// Estilos para los placeholders pendientes(compras unicamente ahora ya que terminamos ventas)
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#888888',
-  },
-});
-
-// Módulos que todavía no desarrollamos
-//Eliminamos VentasPlaceholder ya que el modulo de ventas fue implementado
-function ComprasPlaceholder() {
-  return (
-    <View style={styles.center}>
-      <Text style={styles.title}>Módulo de Compras</Text>
-      <Text style={styles.subtitle}>En desarrollo...</Text>
-    </View>
   );
 }
