@@ -27,7 +27,23 @@ export function S09_VentasScreen() {
     const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE);
     const [cargando, setCargando] = useState<boolean>(true);
     const [busqueda, setBusqueda] = useState<string>('');
-    const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>('Todas');
+    //Separamos estado de stock y categorías para permitir filtros combinados y selección múltiple
+    const [estadoStockSeleccionado, setEstadoStockSeleccionado] = useState<'Todas' | 'Stock Crítico' | 'Sin Stock'>('Todas');
+    const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<string[]>([]);
+
+    //Extraemos los rubros excluyendo los filtros de estado para la fila de categorías
+    const categoriasRubros = useMemo(() => {
+        return categoriasBarra.filter(
+            (c) => c !== 'Todas' && c !== 'Stock Crítico' && c !== 'Sin Stock'
+        );
+    }, [categoriasBarra]);
+
+    //Handler para agregar o remover categorías seleccionadas
+    const toggleCategoria = (cat: string) => {
+        setCategoriasSeleccionadas((prev) =>
+            prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+        );
+    };
 
     const [carrito, setCarrito] = useState<{ [idProducto: string]: ItemCarrito }>({});
 
@@ -82,31 +98,36 @@ export function S09_VentasScreen() {
         };
     }, []);
 
-    // Filtrado reactivo por búsqueda, categoría y ordenamiento por stock
+    //Filtrado combinado reactivo: texto de búsqueda + estado de stock + categorías múltiples
     const productosFiltrados = useMemo(() => {
         const filtrados = productos.filter((item) => {
             const coincideNombre = item.nombre
                 .toLowerCase()
                 .includes(busqueda.toLowerCase().trim());
 
-            let coincideCategoria = false;
-
-            if (categoriaSeleccionada === 'Todas') {
-                coincideCategoria = true;
-            } else if (categoriaSeleccionada === 'Stock Crítico') {
-                coincideCategoria = item.stock > 0 && item.stock < 5;
-            } else if (categoriaSeleccionada === 'Sin Stock') {
-                coincideCategoria = item.stock <= 0;
-            } else {
-                coincideCategoria =
-                    (Array.isArray(item.categorias) &&
-                        item.categorias.some(
-                            (c) => c.toLowerCase() === categoriaSeleccionada.toLowerCase()
-                        )) ||
-                    item.categoria?.toLowerCase() === categoriaSeleccionada.toLowerCase();
+            // Validación reactiva de condición de stock
+            let coincideStock = true;
+            if (estadoStockSeleccionado === 'Stock Crítico') {
+                coincideStock = item.stock > 0 && item.stock < 5;
+            } else if (estadoStockSeleccionado === 'Sin Stock') {
+                coincideStock = item.stock <= 0;
             }
 
-            return coincideNombre && coincideCategoria;
+            //Validación de rubros/categorías múltiples seleccionadas (unión OR)
+            let coincideCategoria = true;
+            if (categoriasSeleccionadas.length > 0) {
+                coincideCategoria = categoriasSeleccionadas.some((catSel) => {
+                    const catLower = catSel.toLowerCase();
+                    const enArray =
+                        Array.isArray(item.categorias) &&
+                        item.categorias.some((c) => c.toLowerCase() === catLower);
+                    const enPrincipal =
+                        item.categoria?.toLowerCase() === catLower;
+                    return enArray || enPrincipal;
+                });
+            }
+
+            return coincideNombre && coincideStock && coincideCategoria;
         });
 
         return filtrados.sort((a, b) => {
@@ -119,7 +140,7 @@ export function S09_VentasScreen() {
 
             return a.nombre.localeCompare(b.nombre);
         });
-    }, [productos, busqueda, categoriaSeleccionada]);
+    }, [productos, busqueda, estadoStockSeleccionado, categoriasSeleccionadas]);
 
     const clientesFiltrados = useMemo(() => {
         if (!busquedaCliente.trim()) return listaClientesFiados;
@@ -317,21 +338,110 @@ export function S09_VentasScreen() {
                 />
             </View>
 
-            <View style={styles.categoriasWrapper}>
+            {/* Rediseño visual de filtros: Segmented Control iOS para estados, separador sutil y FlatList liviano de categorías */}
+            <View style={styles.filtrosContainer}>
+                {/* Fila 1: Segmented Control unificado estilo iOS para Estado de Stock */}
+                <View style={styles.segmentedContainer}>
+                    <TouchableOpacity
+                        style={[
+                            styles.segmentItem,
+                            estadoStockSeleccionado === 'Todas' && styles.segmentItemTodasActivo,
+                        ]}
+                        onPress={() => setEstadoStockSeleccionado('Todas')}
+                        activeOpacity={0.8}
+                    >
+                        <Text
+                            style={[
+                                styles.textoSegment,
+                                estadoStockSeleccionado === 'Todas' && styles.textoSegmentTodasActivo,
+                            ]}
+                        >
+                            Todas
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.segmentItem,
+                            estadoStockSeleccionado === 'Stock Crítico' && styles.segmentItemCriticoActivo,
+                        ]}
+                        onPress={() =>
+                            setEstadoStockSeleccionado((prev) =>
+                                prev === 'Stock Crítico' ? 'Todas' : 'Stock Crítico'
+                            )
+                        }
+                        activeOpacity={0.8}
+                    >
+                        <Text
+                            style={[
+                                styles.textoSegment,
+                                estadoStockSeleccionado === 'Stock Crítico' && styles.textoSegmentCriticoActivo,
+                            ]}
+                        >
+                            Stock Crítico
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.segmentItem,
+                            estadoStockSeleccionado === 'Sin Stock' && styles.segmentItemSinStockActivo,
+                        ]}
+                        onPress={() =>
+                            setEstadoStockSeleccionado((prev) =>
+                                prev === 'Sin Stock' ? 'Todas' : 'Sin Stock'
+                            )
+                        }
+                        activeOpacity={0.8}
+                    >
+                        <Text
+                            style={[
+                                styles.textoSegment,
+                                estadoStockSeleccionado === 'Sin Stock' && styles.textoSegmentSinStockActivo,
+                            ]}
+                        >
+                            Sin Stock
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/*Separador sutil para marcar la jerarquía entre estados y categorías */}
+                <View style={styles.separadorFiltros} />
+
+                {/* Fila 2: Carrusel horizontal FlatList con chips estilizados y livianos */}
                 <FlatList
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    data={categoriasBarra}
+                    data={['Todas', ...categoriasRubros]}
                     keyExtractor={(cat) => cat}
                     contentContainerStyle={styles.listaCategorias}
                     renderItem={({ item: cat }) => {
-                        const activa = categoriaSeleccionada === cat;
+                        const esTodas = cat === 'Todas';
+                        const seleccionada = esTodas
+                            ? categoriasSeleccionadas.length === 0
+                            : categoriasSeleccionadas.includes(cat);
+
                         return (
                             <TouchableOpacity
-                                style={[styles.chip, activa ? styles.chipActivo : null]}
-                                onPress={() => setCategoriaSeleccionada(cat)}
+                                style={[
+                                    styles.chipCategoria,
+                                    seleccionada && styles.chipCategoriaSeleccionada,
+                                ]}
+                                onPress={() => {
+                                    if (esTodas) {
+                                        setCategoriasSeleccionadas([]);
+                                    } else {
+                                        toggleCategoria(cat);
+                                    }
+                                }}
+                                activeOpacity={0.7}
                             >
-                                <Text style={[styles.chipTexto, activa ? styles.chipTextoActivo : null]}>
+                                <Text
+                                    style={[
+                                        styles.textoChipCategoria,
+                                        seleccionada && styles.textoChipCategoriaSeleccionada,
+                                    ]}
+                                >
                                     {cat}
                                 </Text>
                             </TouchableOpacity>
@@ -566,12 +676,93 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#1C1C1E',
     },
-    categoriasWrapper: { backgroundColor: '#FFFFFF', paddingBottom: 10 },
-    listaCategorias: { paddingHorizontal: 16, paddingTop: 10, gap: 8 },
-    chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: '#E5E5EA', marginRight: 6 },
-    chipActivo: { backgroundColor: '#007AFF' },
-    chipTexto: { fontSize: 13, color: '#3A3A3C', fontWeight: '500' },
-    chipTextoActivo: { color: '#FFFFFF', fontWeight: '600' },
+    
+    filtrosContainer: {
+        backgroundColor: '#FFFFFF',
+        paddingBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    segmentedContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#E5E7EB',
+        borderRadius: 10,
+        padding: 3,
+        marginHorizontal: 16,
+        marginTop: 8,
+        marginBottom: 8,
+    },
+    segmentItem: {
+        flex: 1,
+        paddingVertical: 7,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    textoSegment: {
+        fontSize: 13,
+        color: '#4B5563',
+        fontWeight: '500',
+    },
+    segmentItemTodasActivo: {
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.12,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    textoSegmentTodasActivo: {
+        color: '#111827',
+        fontWeight: '600',
+    },
+    segmentItemCriticoActivo: {
+        backgroundColor: '#FFEDD5',
+    },
+    textoSegmentCriticoActivo: {
+        color: '#EA580C',
+        fontWeight: '600',
+    },
+    segmentItemSinStockActivo: {
+        backgroundColor: '#FEE2E2',
+    },
+    textoSegmentSinStockActivo: {
+        color: '#DC2626',
+        fontWeight: '600',
+    },
+    separadorFiltros: {
+        height: 1,
+        backgroundColor: '#E5E7EB',
+        marginHorizontal: 16,
+        marginBottom: 8,
+    },
+    listaCategorias: {
+        paddingHorizontal: 16,
+        paddingBottom: 2,
+        gap: 8,
+    },
+    chipCategoria: {
+        paddingHorizontal: 13,
+        paddingVertical: 6,
+        borderRadius: 16,
+        backgroundColor: '#F3F4F6',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        marginRight: 6,
+    },
+    chipCategoriaSeleccionada: {
+        backgroundColor: '#2563EB',
+        borderColor: '#2563EB',
+    },
+    textoChipCategoria: {
+        fontSize: 13,
+        color: '#4B5563',
+        fontWeight: '500',
+    },
+    textoChipCategoriaSeleccionada: {
+        color: '#FFFFFF',
+        fontWeight: '600',
+    },
     listaProductos: { padding: 12, paddingBottom: 90 },
     filaGrid: { justifyContent: 'space-between', marginBottom: 12 },
     card: {
