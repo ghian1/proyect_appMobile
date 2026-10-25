@@ -1,25 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Modal,
+  FlatList,
+  Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  SafeAreaView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  subscribeToClientesFiados,
-  crearClienteFiado,
-  registrarMovimientoFiado,
-  eliminarClienteFiado, 
   ClienteFiado,
+  crearClienteFiado,
+  eliminarClienteFiado,
+  registrarMovimientoFiado,
+  subscribeToClientesFiados,
 } from '../services/fiadoService';
 import { sanearImporte } from '../utils/sanitizers';
 
@@ -204,7 +206,7 @@ export default function S08_FiadosScreen(): React.ReactNode {
             style={[styles.btnMini, styles.btnRestar]}
             onPress={() => abrirModalSaldo(item, 'PAGO')}
           >
-            <Text style={styles.textoBtnMini}>- Cobrar</Text>
+            <Text style={styles.textoBtnMini}>Cobrar</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -219,42 +221,50 @@ export default function S08_FiadosScreen(): React.ReactNode {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      <View style={styles.header}>
-        <TextInput
-          style={styles.inputBuscador}
-          placeholder="Buscar cliente..."
-          placeholderTextColor="#888"
-          value={busqueda}
-          onChangeText={setBusqueda}
-        />
-        <TouchableOpacity
-          style={styles.botonNuevo}
-          onPress={() => setModalClienteVisible(true)}
-        >
-          <Text style={styles.textoBotonNuevo}>+ Cliente</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={{ flex: 1 }}>
+          <View style={styles.header}>
+            <TextInput
+              style={styles.inputBuscador}
+              placeholder="Buscar cliente..."
+              placeholderTextColor="#888"
+              value={busqueda}
+              onChangeText={setBusqueda}
+              /*Setup de teclado con boton aceptar para buscador principal de clientes */
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={Keyboard.dismiss}
+            />
+            <TouchableOpacity
+              style={styles.botonNuevo}
+              onPress={() => setModalClienteVisible(true)}
+            >
+              <Text style={styles.textoBotonNuevo}>+ Cliente</Text>
+            </TouchableOpacity>
+          </View>
 
-      {cargando ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          {cargando ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+          ) : (
+            <FlatList
+              data={clientesFiltrados}
+              keyExtractor={(item) => item.id || Math.random().toString()}
+              renderItem={renderItem}
+              contentContainerStyle={styles.lista}
+              ListEmptyComponent={
+                <Text style={styles.textoVacio}>
+                  {busqueda
+                    ? 'No se encontraron clientes.'
+                    : 'No hay clientes registrados en la libreta.'}
+                </Text>
+              }
+            />
+          )}
         </View>
-      ) : (
-        <FlatList
-          data={clientesFiltrados}
-          keyExtractor={(item) => item.id || Math.random().toString()}
-          renderItem={renderItem}
-          contentContainerStyle={styles.lista}
-          ListEmptyComponent={
-            <Text style={styles.textoVacio}>
-              {busqueda
-                ? 'No se encontraron clientes.'
-                : 'No hay clientes registrados en la libreta.'}
-            </Text>
-          }
-        />
-      )}
+      </TouchableWithoutFeedback>
 
       {/* MODAL 1: Crear Nuevo Cliente */}
       <Modal
@@ -267,63 +277,77 @@ export default function S08_FiadosScreen(): React.ReactNode {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContent}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>Nuevo Cliente de Fiado</Text>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalContent}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.modalTitle}>Nuevo Cliente de Fiado</Text>
 
-              <Text style={styles.labelInput}>Nombre completo *</Text>
-              <TextInput
-                style={styles.inputModal}
-                placeholder="Ej: Juan Pérez"
-                placeholderTextColor="#A0AEC0"
-                value={nombre}
-                onChangeText={setNombre}
-              />
+                <Text style={styles.labelInput}>Nombre completo *</Text>
+                <TextInput
+                  style={styles.inputModal}
+                  placeholder="Ej: Juan Pérez"
+                  placeholderTextColor="#A0AEC0"
+                  value={nombre}
+                  onChangeText={setNombre}
+                  /* [NUEVO] Setup de teclado con boton aceptar para Nombre */
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                  onSubmitEditing={Keyboard.dismiss}
+                />
 
-              <Text style={styles.labelInput}>Teléfono (Opcional)</Text>
-              <TextInput
-                style={styles.inputModal}
-                placeholder="Ej: 11 1234-5678"
-                placeholderTextColor="#A0AEC0"
-                keyboardType="phone-pad"
-                value={telefono}
-                onChangeText={setTelefono}
-              />
+                <Text style={styles.labelInput}>Teléfono (Opcional)</Text>
+                <TextInput
+                  style={styles.inputModal}
+                  placeholder="Ej: 11 1234-5678"
+                  placeholderTextColor="#A0AEC0"
+                  keyboardType="phone-pad"
+                  value={telefono}
+                  onChangeText={setTelefono}
+                  /*Setup de teclado con boton aceptar para Teléfono */
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                  onSubmitEditing={Keyboard.dismiss}
+                />
 
-              <Text style={styles.labelInput}>Notas o Referencias (Opcional)</Text>
-              <TextInput
-                style={[styles.inputModal, styles.textArea]}
-                placeholder="Ej: Vive a la vuelta del almacén"
-                placeholderTextColor="#A0AEC0"
-                multiline
-                numberOfLines={3}
-                value={notas}
-                onChangeText={setNotas}
-              />
+                <Text style={styles.labelInput}>Notas o Referencias (Opcional)</Text>
+                <TextInput
+                  style={[styles.inputModal, styles.textArea]}
+                  placeholder="Ej: Vive a la vuelta del almacén"
+                  placeholderTextColor="#A0AEC0"
+                  /* Desactiva multiline en iOS para asegurar el boton Done de cierre directo */
+                  multiline={Platform.OS !== 'ios'}
+                  numberOfLines={3}
+                  value={notas}
+                  onChangeText={setNotas}
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                  onSubmitEditing={Keyboard.dismiss}
+                />
 
-              <View style={styles.modalAcciones}>
-                <TouchableOpacity
-                  style={styles.botonCancelar}
-                  onPress={resetFormCliente}
-                  disabled={guardandoCliente}
-                >
-                  <Text style={styles.textoBotonCancelar}>Cancelar</Text>
-                </TouchableOpacity>
+                <View style={styles.modalAcciones}>
+                  <TouchableOpacity
+                    style={styles.botonCancelar}
+                    onPress={resetFormCliente}
+                    disabled={guardandoCliente}
+                  >
+                    <Text style={styles.textoBotonCancelar}>Cancelar</Text>
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.botonGuardar}
-                  onPress={handleGuardarCliente}
-                  disabled={guardandoCliente}
-                >
-                  {guardandoCliente ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <Text style={styles.textoBotonGuardar}>Guardar</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
+                  <TouchableOpacity
+                    style={styles.botonGuardar}
+                    onPress={handleGuardarCliente}
+                    disabled={guardandoCliente}
+                  >
+                    {guardandoCliente ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={styles.textoBotonGuardar}>Guardar</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -338,63 +362,73 @@ export default function S08_FiadosScreen(): React.ReactNode {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {tipoMovimiento === 'FIADO'
-                ? `+ Cargar Fiado a ${clienteSeleccionado?.nombre}`
-                : `- Registrar Pago de ${clienteSeleccionado?.nombre}`}
-            </Text>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>
+                {tipoMovimiento === 'FIADO'
+                  ? `+ Cargar Fiado a ${clienteSeleccionado?.nombre}`
+                  : `- Registrar Pago de ${clienteSeleccionado?.nombre}`}
+              </Text>
 
-            <Text style={styles.labelInput}>Monto ($) *</Text>
-            <TextInput
-              style={styles.inputModal}
-              placeholder="0.00"
-              placeholderTextColor="#A0AEC0"
-              keyboardType="decimal-pad"
-              value={monto}
-              onChangeText={setMonto}
-            />
+              <Text style={styles.labelInput}>Monto ($) *</Text>
+              <TextInput
+                style={styles.inputModal}
+                placeholder="0.00"
+                placeholderTextColor="#A0AEC0"
+                keyboardType="decimal-pad"
+                value={monto}
+                onChangeText={setMonto}
+                /*Setup de teclado con boton aceptar para monto */
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={Keyboard.dismiss}
+              />
 
-            <Text style={styles.labelInput}>Descripción / Concepto</Text>
-            <TextInput
-              style={styles.inputModal}
-              placeholder={
-                tipoMovimiento === 'FIADO'
-                  ? 'Ej: Compra de mercadería'
-                  : 'Ej: Pago a cuenta'
-              }
-              placeholderTextColor="#A0AEC0"
-              value={concepto}
-              onChangeText={setConcepto}
-            />
+              <Text style={styles.labelInput}>Descripción / Concepto</Text>
+              <TextInput
+                style={styles.inputModal}
+                placeholder={
+                  tipoMovimiento === 'FIADO'
+                    ? 'Ej: Compra de mercadería'
+                    : 'Ej: Pago a cuenta'
+                }
+                placeholderTextColor="#A0AEC0"
+                value={concepto}
+                onChangeText={setConcepto}
+                /*Setup de teclado con boton aceptar para descripcion */
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={Keyboard.dismiss}
+              />
 
-            <View style={styles.modalAcciones}>
-              <TouchableOpacity
-                style={styles.botonCancelar}
-                onPress={() => setModalSaldoVisible(false)}
-                disabled={procesandoSaldo}
-              >
-                <Text style={styles.textoBotonCancelar}>Cancelar</Text>
-              </TouchableOpacity>
+              <View style={styles.modalAcciones}>
+                <TouchableOpacity
+                  style={styles.botonCancelar}
+                  onPress={() => setModalSaldoVisible(false)}
+                  disabled={procesandoSaldo}
+                >
+                  <Text style={styles.textoBotonCancelar}>Cancelar</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
-                  styles.botonGuardar,
-                  tipoMovimiento === 'FIADO' ? styles.btnSumar : styles.btnRestar,
-                ]}
-                onPress={handleProcesarSaldo}
-                disabled={procesandoSaldo}
-              >
-                {procesandoSaldo ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.textoBotonGuardar}>
-                    {tipoMovimiento === 'FIADO' ? 'Sumar Deuda' : 'Descontar Deuda'}
-                  </Text>
-                )}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.botonGuardar,
+                    tipoMovimiento === 'FIADO' ? styles.btnSumar : styles.btnRestar,
+                  ]}
+                  onPress={handleProcesarSaldo}
+                  disabled={procesandoSaldo}
+                >
+                  {procesandoSaldo ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.textoBotonGuardar}>
+                      {tipoMovimiento === 'FIADO' ? 'Sumar Deuda' : 'Descontar Deuda'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
@@ -413,6 +447,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 14,
+    color: '#1F2937',
   },
   botonNuevo: {
     backgroundColor: '#10B981',

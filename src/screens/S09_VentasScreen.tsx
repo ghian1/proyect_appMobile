@@ -5,7 +5,9 @@ import {
     FlatList,
     Image,
     Keyboard,
+    KeyboardAvoidingView, // Importado para ajustar la vista del modal al abrir el teclado
     Modal,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -308,6 +310,10 @@ export function S09_VentasScreen() {
                     value={busqueda}
                     onChangeText={setBusqueda}
                     autoCapitalize="none"
+                    /* Setup de teclado limpio para el buscador de ventas */
+                    returnKeyType="done"
+                    blurOnSubmit={true}
+                    onSubmitEditing={Keyboard.dismiss}
                 />
             </View>
 
@@ -369,170 +375,181 @@ export function S09_VentasScreen() {
 
             {/* MODAL PRINCIPAL DE COBRO */}
             <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={styles.modalFondo}>
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                        <View style={styles.modalContenido}>
-                            <Text style={styles.modalTitulo}>Resumen de Venta</Text>
+                {/*KeyboardAvoidingView dentro del modal para que los inputs de Efectivo y Fiados suban sobre el teclado */}
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                >
+                    <View style={styles.modalFondo}>
+                        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                            <View style={styles.modalContenido}>
+                                <Text style={styles.modalTitulo}>Resumen de Venta</Text>
 
-                            <ScrollView style={styles.scrollModal} nestedScrollEnabled>
-                                {listaItemsCarrito.map((item) => (
-                                    <View key={item.idProducto} style={styles.filaItemCarrito}>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={styles.itemNombre}>{item.nombre}</Text>
-                                            <Text style={styles.itemDetalle}>
-                                                {item.cantidad} x ${item.precio.toFixed(2)}
-                                            </Text>
+                                <ScrollView style={styles.scrollModal} nestedScrollEnabled>
+                                    {listaItemsCarrito.map((item) => (
+                                        <View key={item.idProducto} style={styles.filaItemCarrito}>
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={styles.itemNombre}>{item.nombre}</Text>
+                                                <Text style={styles.itemDetalle}>
+                                                    {item.cantidad} x ${item.precio.toFixed(2)}
+                                                </Text>
+                                            </View>
+                                            <Text style={styles.itemSubtotal}>${item.subtotal.toFixed(2)}</Text>
                                         </View>
-                                        <Text style={styles.itemSubtotal}>${item.subtotal.toFixed(2)}</Text>
-                                    </View>
-                                ))}
-                            </ScrollView>
+                                    ))}
+                                </ScrollView>
 
-                            <View style={styles.divisor} />
+                                <View style={styles.divisor} />
 
-                            <View style={styles.filaTotal}>
-                                <Text style={styles.labelTotal}>TOTAL A COBRAR:</Text>
-                                <Text style={styles.valorTotal}>${totalImporte.toFixed(2)}</Text>
-                            </View>
+                                <View style={styles.filaTotal}>
+                                    <Text style={styles.labelTotal}>TOTAL A COBRAR:</Text>
+                                    <Text style={styles.valorTotal}>${totalImporte.toFixed(2)}</Text>
+                                </View>
 
-                            <Text style={styles.labelSeccion}>Medio de Pago:</Text>
-                            {/* SELECTOR DE MEDIOS DE PAGO (4 OPCIONES) */}
-                            <View style={styles.contenedorMediosPago}>
-                                {(['Efectivo', 'Mercado Pago', 'Transferencia', 'Fiado'] as const).map((m) => (
-                                    <TouchableOpacity
-                                        key={m}
-                                        style={[styles.chipPago, medioPago === m && styles.chipPagoActivo]}
-                                        onPress={() => setMedioPago(m)}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.textoChipPago,
-                                                medioPago === m && styles.textoChipPagoActivo,
-                                            ]}
-                                            numberOfLines={1}
+                                <Text style={styles.labelSeccion}>Medio de Pago:</Text>
+                                {/* SELECTOR DE MEDIOS DE PAGO (4 OPCIONES) */}
+                                <View style={styles.contenedorMediosPago}>
+                                    {(['Efectivo', 'Mercado Pago', 'Transferencia', 'Fiado'] as const).map((m) => (
+                                        <TouchableOpacity
+                                            key={m}
+                                            style={[styles.chipPago, medioPago === m && styles.chipPagoActivo]}
+                                            onPress={() => setMedioPago(m)}
                                         >
-                                            {m}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                                            <Text
+                                                style={[
+                                                    styles.textoChipPago,
+                                                    medioPago === m && styles.textoChipPagoActivo,
+                                                ]}
+                                                numberOfLines={1}
+                                            >
+                                                {m}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
 
-                            {/* VISTA DIRECTA DEL QR AL SELECCIONAR MERCADO PAGO */}
-                            {medioPago === 'Mercado Pago' && (
-                                <View style={styles.seccionMP}>
-                                    <Text style={styles.instruccionQR}>Escaneá para abonar ${totalImporte.toFixed(2)}</Text>
-                                    <View style={styles.contenedorImagenQR}>
-                                        <Image
-                                            source={{
-                                                uri: `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=AlmacenMingo_$${totalImporte.toFixed(2)}`,
-                                            }}
-                                            style={styles.imagenQR}
-                                        />
+                                {/* VISTA DIRECTA DEL QR AL SELECCIONAR MERCADO PAGO */}
+                                {medioPago === 'Mercado Pago' && (
+                                    <View style={styles.seccionMP}>
+                                        <Text style={styles.instruccionQR}>Escaneá para abonar ${totalImporte.toFixed(2)}</Text>
+                                        <View style={styles.contenedorImagenQR}>
+                                            <Image
+                                                source={{
+                                                    uri: `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=AlmacenMingo_$${totalImporte.toFixed(2)}`,
+                                                }}
+                                                style={styles.imagenQR}
+                                            />
+                                        </View>
+                                        <Text style={styles.alertaMP}>Al confirmar, la venta se sumará a la caja del día.</Text>
                                     </View>
-                                    <Text style={styles.alertaMP}>Al confirmar, la venta se sumará a la caja del día.</Text>
-                                </View>
-                            )}
+                                )}
 
-                            {/* VISTA INFORMATIVA PARA TRANSFERENCIA */}
-                            {medioPago === 'Transferencia' && (
-                                <View style={styles.seccionTransferencia}>
-                                    <Text style={styles.tituloTransferencia}>Cobro por Transferencia Bancaria</Text>
-                                    <Text style={styles.montoTransferencia}>Monto a recibir: ${totalImporte.toFixed(2)}</Text>
-                                    <Text style={styles.alertaTransferencia}>
-                                        Verificá en la app de tu banco el ingreso del dinero antes de presionar "Confirmar Cobro".
-                                    </Text>
-                                </View>
-                            )}
-
-                            {medioPago === 'Fiado' && (
-                                <View style={styles.seccionFiado}>
-                                    <Text style={styles.labelInput}>Seleccionar Cliente de la Libreta:</Text>
-
-                                    <TextInput
-                                        style={styles.inputBuscadorCliente}
-                                        placeholder="Buscar cliente por nombre..."
-                                        placeholderTextColor="#8E8E93"
-                                        value={busquedaCliente}
-                                        onChangeText={setBusquedaCliente}
-                                        returnKeyType="done"
-                                        onSubmitEditing={Keyboard.dismiss}
-                                    />
-
-                                    <ScrollView style={styles.scrollClientes} nestedScrollEnabled>
-                                        {clientesFiltrados.length === 0 ? (
-                                            <Text style={styles.textoSinClientes}>No se encontraron clientes registrados.</Text>
-                                        ) : (
-                                            clientesFiltrados.map((cliente) => {
-                                                const seleccionado = clienteFiadoSeleccionado?.id === cliente.id;
-                                                return (
-                                                    <TouchableOpacity
-                                                        key={cliente.id}
-                                                        style={[
-                                                            styles.tarjetaClienteFiado,
-                                                            seleccionado && styles.tarjetaClienteSeleccionado,
-                                                        ]}
-                                                        onPress={() => setClienteFiadoSeleccionado(cliente)}
-                                                    >
-                                                        <View>
-                                                            <Text style={[styles.nombreCliente, seleccionado && styles.textoClienteSeleccionado]}>
-                                                                {cliente.nombre}
-                                                            </Text>
-                                                            <Text style={styles.deudaCliente}>
-                                                                Deuda actual: ${cliente.deudaTotal?.toFixed(2) || '0.00'}
-                                                            </Text>
-                                                        </View>
-                                                        {seleccionado && <Text style={styles.checkSeleccionado}>✓</Text>}
-                                                    </TouchableOpacity>
-                                                );
-                                            })
-                                        )}
-                                    </ScrollView>
-                                </View>
-                            )}
-
-                            {medioPago === 'Efectivo' && (
-                                <View style={styles.seccionEfectivo}>
-                                    <Text style={styles.labelInput}>Paga con ($):</Text>
-                                    <TextInput
-                                        style={styles.inputEfectivo}
-                                        placeholder="0.00"
-                                        keyboardType="numeric"
-                                        value={montoPagaCon}
-                                        onChangeText={setMontoPagaCon}
-                                        returnKeyType="done"
-                                        onSubmitEditing={Keyboard.dismiss}
-                                    />
-                                    {vueltoCalculado > 0 && (
-                                        <Text style={styles.textoVuelto}>
-                                            Vuelto a entregar: ${vueltoCalculado.toFixed(2)}
+                                {/* VISTA INFORMATIVA PARA TRANSFERENCIA */}
+                                {medioPago === 'Transferencia' && (
+                                    <View style={styles.seccionTransferencia}>
+                                        <Text style={styles.tituloTransferencia}>Cobro por Transferencia Bancaria</Text>
+                                        <Text style={styles.montoTransferencia}>Monto a recibir: ${totalImporte.toFixed(2)}</Text>
+                                        <Text style={styles.alertaTransferencia}>
+                                            Verificá en la app de tu banco el ingreso del dinero antes de presionar "Confirmar Cobro".
                                         </Text>
-                                    )}
+                                    </View>
+                                )}
+
+                                {medioPago === 'Fiado' && (
+                                    <View style={styles.seccionFiado}>
+                                        <Text style={styles.labelInput}>Seleccionar Cliente de la Libreta:</Text>
+
+                                        <TextInput
+                                            style={styles.inputBuscadorCliente}
+                                            placeholder="Buscar cliente por nombre..."
+                                            placeholderTextColor="#8E8E93"
+                                            value={busquedaCliente}
+                                            onChangeText={setBusquedaCliente}
+                                            /* Setup de teclado limpio para la busqueda de cliente fiado */
+                                            returnKeyType="done"
+                                            blurOnSubmit={true}
+                                            onSubmitEditing={Keyboard.dismiss}
+                                        />
+
+                                        <ScrollView style={styles.scrollClientes} nestedScrollEnabled>
+                                            {clientesFiltrados.length === 0 ? (
+                                                <Text style={styles.textoSinClientes}>No se encontraron clientes registrados.</Text>
+                                            ) : (
+                                                clientesFiltrados.map((cliente) => {
+                                                    const seleccionado = clienteFiadoSeleccionado?.id === cliente.id;
+                                                    return (
+                                                        <TouchableOpacity
+                                                            key={cliente.id}
+                                                            style={[
+                                                                styles.tarjetaClienteFiado,
+                                                                seleccionado && styles.tarjetaClienteSeleccionado,
+                                                            ]}
+                                                            onPress={() => setClienteFiadoSeleccionado(cliente)}
+                                                        >
+                                                            <View>
+                                                                <Text style={[styles.nombreCliente, seleccionado && styles.textoClienteSeleccionado]}>
+                                                                    {cliente.nombre}
+                                                                </Text>
+                                                                <Text style={styles.deudaCliente}>
+                                                                    Deuda actual: ${cliente.deudaTotal?.toFixed(2) || '0.00'}
+                                                                </Text>
+                                                            </View>
+                                                            {seleccionado && <Text style={styles.checkSeleccionado}>✓</Text>}
+                                                        </TouchableOpacity>
+                                                    );
+                                                })
+                                            )}
+                                        </ScrollView>
+                                    </View>
+                                )}
+
+                                {medioPago === 'Efectivo' && (
+                                    <View style={styles.seccionEfectivo}>
+                                        <Text style={styles.labelInput}>Paga con ($):</Text>
+                                        <TextInput
+                                            style={styles.inputEfectivo}
+                                            placeholder="0.00"
+                                            placeholderTextColor="#8E8E93"
+                                            keyboardType="numeric"
+                                            value={montoPagaCon}
+                                            onChangeText={setMontoPagaCon}
+                                            /* Setup de teclado limpio para el input numérico de efectivo */
+                                            returnKeyType="done"
+                                            blurOnSubmit={true}
+                                            onSubmitEditing={Keyboard.dismiss}
+                                        />
+                                        {vueltoCalculado > 0 && (
+                                            <Text style={styles.textoVuelto}>
+                                                Vuelto a entregar: ${vueltoCalculado.toFixed(2)}
+                                            </Text>
+                                        )}
+                                    </View>
+                                )}
+
+                                <View style={styles.botonesModal}>
+                                    <TouchableOpacity
+                                        style={styles.botonCancelarModal}
+                                        onPress={() => setModalVisible(false)}
+                                    >
+                                        <Text style={styles.textoCancelar}>Volver</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.botonCobrarModal, procesandoVenta && styles.botonDeshabilitado]}
+                                        onPress={handleConfirmarVenta}
+                                        disabled={procesandoVenta}
+                                    >
+                                        {procesandoVenta ? (
+                                            <ActivityIndicator color="#FFF" />
+                                        ) : (
+                                            <Text style={styles.textoCobrar}>Confirmar Cobro</Text>
+                                        )}
+                                    </TouchableOpacity>
                                 </View>
-                            )}
-
-                            <View style={styles.botonesModal}>
-                                <TouchableOpacity
-                                    style={styles.botonCancelarModal}
-                                    onPress={() => setModalVisible(false)}
-                                >
-                                    <Text style={styles.textoCancelar}>Volver</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[styles.botonCobrarModal, procesandoVenta && styles.botonDeshabilitado]}
-                                    onPress={handleConfirmarVenta}
-                                    disabled={procesandoVenta}
-                                >
-                                    {procesandoVenta ? (
-                                        <ActivityIndicator color="#FFF" />
-                                    ) : (
-                                        <Text style={styles.textoCobrar}>Confirmar Cobro</Text>
-                                    )}
-                                </TouchableOpacity>
                             </View>
-                        </View>
-                    </TouchableWithoutFeedback>
-                </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
     );
@@ -671,6 +688,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 7,
         fontSize: 13,
+        color: '#1C1C1E',
         marginBottom: 8,
     },
     scrollClientes: { maxHeight: 110 },
@@ -697,7 +715,7 @@ const styles = StyleSheet.create({
 
     seccionEfectivo: { marginBottom: 16 },
     labelInput: { fontSize: 13, fontWeight: '500', color: '#3A3A3C', marginBottom: 4 },
-    inputEfectivo: { borderWidth: 1, borderColor: '#D1D1D6', borderRadius: 8, padding: 10, fontSize: 16 },
+    inputEfectivo: { borderWidth: 1, borderColor: '#D1D1D6', borderRadius: 8, padding: 10, fontSize: 16, color: '#1C1C1E' },
     textoVuelto: { marginTop: 6, fontSize: 14, fontWeight: 'bold', color: '#34C759' },
     botonesModal: { flexDirection: 'row', gap: 12, marginTop: 4 },
     botonCancelarModal: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#E5E5EA', alignItems: 'center' },

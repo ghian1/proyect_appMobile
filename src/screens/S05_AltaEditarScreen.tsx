@@ -1,17 +1,22 @@
+import { useHeaderHeight } from '@react-navigation/elements'; // Hook para calcular la altura dinamica del header nativo
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Keyboard, // Importado para poder cerrar el teclado con Keyboard.dismiss, fixeo que hicimos gracias a un testeo de usuario
+  KeyboardAvoidingView, // Importado para desplazar la vista cuando emerge el teclado, fixeo que hicimos gracias a un testeo de usuario
   Modal,
+  Platform, // Importado para detectar la plataforma (iOS/Android)
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback, // Importado para detectar toques fuera de los inputs
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,6 +37,8 @@ type ScreenNavProp = NativeStackNavigationProp<StockStackParamList, 'ProductEdit
 export function S05_AltaEditarScreen() {
   const navigation = useNavigation<ScreenNavProp>();
   const route = useRoute<ScreenRouteProp>();
+  const headerHeight = useHeaderHeight(); 
+  const scrollViewRef = useRef<any>(null); 
 
   const productId = route.params?.productId;
   const esEdicion = Boolean(productId);
@@ -124,7 +131,7 @@ export function S05_AltaEditarScreen() {
     }
   };
 
-  //Guardado persistente de nueva categoría en Firestore
+  // Guardado persistente de nueva categoría en Firestore
   const handleConfirmarNuevaCategoria = async () => {
     if (!nuevaCatTexto.trim()) {
       Alert.alert('Atención', 'Ingresá un nombre para la categoría.');
@@ -231,138 +238,171 @@ export function S05_AltaEditarScreen() {
 
   return (
     <SafeAreaView style={styles.contenedor}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.titulo}>
-          {esEdicion ? 'Editar Mercadería' : 'Nueva Mercadería'}
-        </Text>
+      {/* KeyboardAvoidingView para desplazar la pantalla cuando el teclado emerge */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={headerHeight}
+      >
+        {/* TouchableWithoutFeedback para cerrar el teclado al tocar fuera de los campos */}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.titulo}>
+              {esEdicion ? 'Editar Mercadería' : 'Nueva Mercadería'}
+            </Text>
 
-        <View style={styles.seccionFoto}>
-          {imagenUri ? (
-            <Image source={{ uri: imagenUri }} style={styles.fotoPreview} />
-          ) : (
-            <View style={styles.fotoPlaceholder}>
-              <Text style={styles.placeholderTexto}>Sin Foto</Text>
-            </View>
-          )}
+            <View style={styles.seccionFoto}>
+              {imagenUri ? (
+                <Image source={{ uri: imagenUri }} style={styles.fotoPreview} />
+              ) : (
+                <View style={styles.fotoPlaceholder}>
+                  <Text style={styles.placeholderTexto}>Sin Foto</Text>
+                </View>
+              )}
 
-          <View style={styles.contenedorBotonesFoto}>
-            <TouchableOpacity
-              style={styles.botonCamara}
-              onPress={tomarFotoConCamara}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.textoBotonCamara}>📷 Tomar Foto</Text>
-            </TouchableOpacity>
-
-            {imagenUri && (
-              <TouchableOpacity
-                onPress={() => setImagenUri(null)}
-                style={styles.botonEliminarFoto}
-              >
-                <Text style={styles.textoEliminarFoto}>Quitar foto</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.campo}>
-          <Text style={styles.label}>Nombre del producto *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: Fideos Marolio 500g"
-            placeholderTextColor="#8E8E93"
-            value={nombre}
-            onChangeText={setNombre}
-          />
-        </View>
-
-        <View style={styles.campo}>
-          <Text style={styles.label}>Categorías (podés elegir varias)</Text>
-          <View style={styles.categoriasContenedor}>
-            {listaCategorias.map((cat) => {
-              const seleccionada = categorias.includes(cat);
-              return (
+              <View style={styles.contenedorBotonesFoto}>
                 <TouchableOpacity
-                  key={cat}
-                  style={[styles.chip, seleccionada ? styles.chipSeleccionado : null]}                  
-                  onPress={() => toggleCategoria(cat)}
+                  style={styles.botonCamara}
+                  onPress={tomarFotoConCamara}
                   activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.chipTexto,
-                      seleccionada ? styles.chipTextoSeleccionado : null,
-                    ]}
-                  >
-                    {cat} {seleccionada ? '✓' : ''}
-                  </Text>
+                  <Text style={styles.textoBotonCamara}>📷 Tomar Foto</Text>
                 </TouchableOpacity>
-              );
-            })}
+
+                {imagenUri && (
+                  <TouchableOpacity
+                    onPress={() => setImagenUri(null)}
+                    style={styles.botonEliminarFoto}
+                  >
+                    <Text style={styles.textoEliminarFoto}>Quitar foto</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.campo}>
+              <Text style={styles.label}>Nombre del producto *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ej: Fideos Marolio 500g"
+                placeholderTextColor="#8E8E93"
+                value={nombre}
+                onChangeText={setNombre}
+                /*Se utiliza 'numbers-and-punctuation' para forzar en iOS el mismo teclado moderno con boton 'Done' arriba que Precio/Stock */
+                keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+            </View>
+
+            <View style={styles.campo}>
+              <Text style={styles.label}>Categorías (podés elegir varias)</Text>
+              <View style={styles.categoriasContenedor}>
+                {listaCategorias.map((cat) => {
+                  const seleccionada = categorias.includes(cat);
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[styles.chip, seleccionada ? styles.chipSeleccionado : null]}                  
+                      onPress={() => toggleCategoria(cat)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.chipTexto,
+                          seleccionada ? styles.chipTextoSeleccionado : null,
+                        ]}
+                      >
+                        {cat} {seleccionada ? '✓' : ''}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                <TouchableOpacity
+                  style={styles.chipAgregarCategoria}
+                  onPress={() => setModalCatVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.textoAgregarCategoria}>+ Nueva Categoría</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.filaInputs}>
+              <View style={[styles.campo, styles.columna]}>
+                <Text style={styles.label}>Precio ($) *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0.00"
+                  placeholderTextColor="#8E8E93"
+                  keyboardType="numeric"
+                  value={precioTexto}
+                  onChangeText={setPrecioTexto}
+                  /* Cierre de teclado y botón 'Done', aplicar en toda la app, luego de testeos */
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+              </View>
+
+              <View style={[styles.campo, styles.columna]}>
+                <Text style={styles.label}>Stock inicial *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor="#8E8E93"
+                  keyboardType="number-pad"
+                  value={stockTexto}
+                  onChangeText={setStockTexto}
+                  /* Cierre de teclado y botón 'Done', aplicar en toda la app, luego de testeos */
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+              </View>
+            </View>
+
+            <View style={styles.campo}>
+              <Text style={styles.label}>Descripción / Notas (Opcional)</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Aclaraciones del proveedor, ubicación en depósito..."
+                placeholderTextColor="#8E8E93"
+                value={descripcion}
+                onChangeText={setDescripcion}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 150);
+                }}
+                /*Forzamos exactamente el mismo teclado con Done arriba y quitamos multiline en iOS que lo bloqueaba */
+                keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
+                multiline={Platform.OS !== 'ios'}
+                numberOfLines={3}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+            </View>
 
             <TouchableOpacity
-              style={styles.chipAgregarCategoria}
-              onPress={() => setModalCatVisible(true)}
-              activeOpacity={0.7}
+              style={[styles.botonGuardar, guardando && styles.botonDeshabilitado]}
+              onPress={handleGuardar}
+              disabled={guardando}
             >
-              <Text style={styles.textoAgregarCategoria}>+ Nueva Categoría</Text>
+              {guardando ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.textoBotonGuardar}>
+                  {esEdicion ? 'Actualizar Producto' : 'Registrar Producto'}
+                </Text>
+              )}
             </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.filaInputs}>
-          <View style={[styles.campo, styles.columna]}>
-            <Text style={styles.label}>Precio ($) *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0.00"
-              placeholderTextColor="#8E8E93"
-              keyboardType="numeric"
-              value={precioTexto}
-              onChangeText={setPrecioTexto}
-            />
-          </View>
-
-          <View style={[styles.campo, styles.columna]}>
-            <Text style={styles.label}>Stock inicial *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor="#8E8E93"
-              keyboardType="number-pad"
-              value={stockTexto}
-              onChangeText={setStockTexto}
-            />
-          </View>
-        </View>
-
-        <View style={styles.campo}>
-          <Text style={styles.label}>Descripción / Notas (Opcional)</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Aclaraciones del proveedor, ubicación en depósito..."
-            placeholderTextColor="#8E8E93"
-            multiline
-            numberOfLines={3}
-            value={descripcion}
-            onChangeText={setDescripcion}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.botonGuardar, guardando && styles.botonDeshabilitado]}
-          onPress={handleGuardar}
-          disabled={guardando}
-        >
-          {guardando ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.textoBotonGuardar}>
-              {esEdicion ? 'Actualizar Producto' : 'Registrar Producto'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
 
       <Modal visible={modalCatVisible} animationType="fade" transparent>
         <View style={styles.modalFondo}>
@@ -377,6 +417,9 @@ export function S05_AltaEditarScreen() {
               value={nuevaCatTexto}
               onChangeText={setNuevaCatTexto}
               autoFocus
+              /* Cierre de teclado y botón 'Done' en Modal, aplicar en toda la app, luego de testeos */
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
             />
 
             <View style={styles.modalBotones}>
@@ -420,6 +463,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 20,
+    paddingBottom: 100,
   },
   titulo: {
     fontSize: 22,

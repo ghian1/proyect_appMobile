@@ -1,24 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { suscribirAProductos, Producto } from '../services/productService';
 import {
-  ItemCompra,
-  obtenerPlanillaBorrador,
-  guardarPlanillaBorrador,
   confirmarCompraYSumarStock,
-  obtenerHistorialCompras, // 👈 Asegurate de tenerlo o definirlo en tu servicio
+  guardarPlanillaBorrador,
+  ItemCompra,
+  obtenerHistorialCompras,
+  obtenerPlanillaBorrador,
 } from '../services/compraService';
+import { Producto, suscribirAProductos } from '../services/productService';
 import { sanearEntero, sanearImporte } from '../utils/sanitizers';
 
 export default function S10_ComprasScreen(): React.ReactNode {
@@ -92,7 +96,9 @@ export default function S10_ComprasScreen(): React.ReactNode {
   const abrirModalProducto = (prod: Producto) => {
     setProductoSeleccionado(prod);
     setCantidadInput('');
-    setPrecioCostoInput(prod.precioCosto ? prod.precioCosto.toString() : '');
+    /* [NUEVO FIX TS] Acceso seguro a precioCosto con casting para resolver el error de TypeScript */
+    const precioCostoVal = (prod as any).precioCosto;
+    setPrecioCostoInput(precioCostoVal ? precioCostoVal.toString() : '');
     setEsEdicion(false);
     setModalVisible(true);
   };
@@ -219,204 +225,234 @@ export default function S10_ComprasScreen(): React.ReactNode {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* Header Buscador + Botón de Historial */}
-      <View style={styles.header}>
-        <TextInput
-          style={styles.inputBuscador}
-          placeholder="Escribí para buscar un producto..."
-          placeholderTextColor="#888"
-          value={busqueda}
-          onChangeText={setBusqueda}
-        />
-        <TouchableOpacity style={styles.btnHistorialHeader} onPress={abrirHistorial}>
-          <Text style={styles.textoBtnHistorial}>📜 Historial</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={{ flex: 1 }}>
+          {/* Header Buscador + Botón de Historial */}
+          <View style={styles.header}>
+            <TextInput
+              style={styles.inputBuscador}
+              placeholder="Escribí para buscar un producto..."
+              placeholderTextColor="#888"
+              value={busqueda}
+              onChangeText={setBusqueda}
+              /* [NUEVO] Setup de teclado limpio para buscador de compras */
+              returnKeyType="done"
+              blurOnSubmit={true}
+              onSubmitEditing={Keyboard.dismiss}
+            />
+            <TouchableOpacity style={styles.btnHistorialHeader} onPress={abrirHistorial}>
+              <Text style={styles.textoBtnHistorial}>📜 Historial</Text>
+            </TouchableOpacity>
+          </View>
 
-      {/* Selector desplegable de búsqueda */}
-      {cargandoProductos ? (
-        <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 10 }} />
-      ) : busqueda.trim().length > 0 ? (
-        <View style={styles.resultadosContenedor}>
+          {/* Selector desplegable de búsqueda */}
+          {cargandoProductos ? (
+            <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 10 }} />
+          ) : busqueda.trim().length > 0 ? (
+            <View style={styles.resultadosContenedor}>
+              <FlatList
+                data={productosFiltrados}
+                keyExtractor={(item) => item.id || Math.random().toString()}
+                keyboardShouldPersistTaps="handled"
+                style={{ maxHeight: 180 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.itemBusqueda}
+                    onPress={() => abrirModalProducto(item)}
+                  >
+                    <Text style={styles.nombreProdBusqueda}>{item.nombre}</Text>
+                    <Text style={styles.stockProdBusqueda}>Stock actual: {item.stock || 0} u.</Text>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <Text style={styles.textoNoResultado}>
+                    No se encontraron productos con ese nombre.
+                  </Text>
+                }
+              />
+            </View>
+          ) : null}
+
+          {/* PLANILLA DE COMPRAS */}
+          <View style={styles.planillaHeader}>
+            <Text style={styles.tituloPlanilla}>📋 Planilla de Compras Pendiente</Text>
+          </View>
+
           <FlatList
-            data={productosFiltrados}
-            keyExtractor={(item) => item.id || Math.random().toString()}
+            data={planillaItems}
+            keyExtractor={(item) => item.productId}
+            contentContainerStyle={styles.listaPlanilla}
             keyboardShouldPersistTaps="handled"
-            style={{ maxHeight: 180 }}
             renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.itemBusqueda}
-                onPress={() => abrirModalProducto(item)}
-              >
-                <Text style={styles.nombreProdBusqueda}>{item.nombre}</Text>
-                <Text style={styles.stockProdBusqueda}>Stock actual: {item.stock || 0} u.</Text>
-              </TouchableOpacity>
+              <View style={styles.cardPlanilla}>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={styles.nombreItem}>{item.nombre}</Text>
+                  <Text style={styles.detalleItem}>
+                    {item.cantidad} u. x ${item.precioCosto.toLocaleString('es-AR')} (Costo)
+                  </Text>
+                </View>
+
+                <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                  <Text style={styles.subtotalItem}>${item.subtotal.toLocaleString('es-AR')}</Text>
+
+                  <View style={styles.accionesCard}>
+                    <TouchableOpacity
+                      style={styles.btnEditar}
+                      onPress={() => abrirModalEditarItem(item)}
+                    >
+                      <Text style={styles.textoBtnEditar}>✏️ Editar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => handleQuitarItem(item.productId)}>
+                      <Text style={styles.btnQuitar}>Quitar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
             )}
             ListEmptyComponent={
-              <Text style={styles.textoNoResultado}>
-                No se encontraron productos con ese nombre.
+              <Text style={styles.textoVacio}>
+                La planilla está vacía. Escribí el nombre de un producto en el buscador de arriba para comenzar a armar el pedido.
               </Text>
             }
           />
-        </View>
-      ) : null}
 
-      {/* PLANILLA DE COMPRAS */}
-      <View style={styles.planillaHeader}>
-        <Text style={styles.tituloPlanilla}>📋 Planilla de Compras Pendiente</Text>
-      </View>
-
-      <FlatList
-        data={planillaItems}
-        keyExtractor={(item) => item.productId}
-        contentContainerStyle={styles.listaPlanilla}
-        keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => (
-          <View style={styles.cardPlanilla}>
-            <View style={{ flex: 1, paddingRight: 8 }}>
-              <Text style={styles.nombreItem}>{item.nombre}</Text>
-              <Text style={styles.detalleItem}>
-                {item.cantidad} u. x ${item.precioCosto.toLocaleString('es-AR')} (Costo)
-              </Text>
-            </View>
-
-            <View style={{ alignItems: 'flex-end', gap: 6 }}>
-              <Text style={styles.subtotalItem}>${item.subtotal.toLocaleString('es-AR')}</Text>
-
-              <View style={styles.accionesCard}>
-                <TouchableOpacity
-                  style={styles.btnEditar}
-                  onPress={() => abrirModalEditarItem(item)}
-                >
-                  <Text style={styles.textoBtnEditar}>✏️ Editar</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => handleQuitarItem(item.productId)}>
-                  <Text style={styles.btnQuitar}>Quitar</Text>
-                </TouchableOpacity>
+          {/* PANEL INFERIOR DE TOTAL Y CONFIRMACIÓN */}
+          {planillaItems.length > 0 && (
+            <View style={styles.panelInferior}>
+              <View style={styles.resumenTotal}>
+                <Text style={styles.labelTotal}>MONTO PLANILLA ESTIMADO</Text>
+                <Text style={styles.montoTotal}>${totalCalculado.toLocaleString('es-AR')}</Text>
               </View>
+
+              <TouchableOpacity
+                style={styles.botonConfirmar}
+                onPress={handleIniciarConfirmacion}
+                disabled={procesando}
+              >
+                <Text style={styles.textoBotonConfirmar}>Ingresar a Stock y Archivar 🚚</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-        )}
-        ListEmptyComponent={
-          <Text style={styles.textoVacio}>
-            La planilla está vacía. Escribí el nombre de un producto en el buscador de arriba para comenzar a armar el pedido.
-          </Text>
-        }
-      />
-
-      {/* PANEL INFERIOR DE TOTAL Y CONFIRMACIÓN */}
-      {planillaItems.length > 0 && (
-        <View style={styles.panelInferior}>
-          <View style={styles.resumenTotal}>
-            <Text style={styles.labelTotal}>MONTO PLANILLA ESTIMADO</Text>
-            <Text style={styles.montoTotal}>${totalCalculado.toLocaleString('es-AR')}</Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.botonConfirmar}
-            onPress={handleIniciarConfirmacion}
-            disabled={procesando}
-          >
-            <Text style={styles.textoBotonConfirmar}>Ingresar a Stock y Archivar 🚚</Text>
-          </TouchableOpacity>
+          )}
         </View>
-      )}
+      </TouchableWithoutFeedback>
 
       {/* MODAL 1: AGREGAR O EDITAR PRODUCTO EN LA PLANILLA */}
       <Modal visible={modalVisible} animationType="fade" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {esEdicion ? 'Editar en Planilla' : 'Añadir a Planilla'}
-            </Text>
-            <Text style={styles.modalSub}>{productoSeleccionado?.nombre}</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>
+                {esEdicion ? 'Editar en Planilla' : 'Añadir a Planilla'}
+              </Text>
+              <Text style={styles.modalSub}>{productoSeleccionado?.nombre}</Text>
 
-            <Text style={styles.labelInput}>Cantidad a comprar *</Text>
-            <TextInput
-              style={styles.inputModal}
-              placeholder="Ej: 12"
-              placeholderTextColor="#A0AEC0"
-              keyboardType="number-pad"
-              value={cantidadInput}
-              onChangeText={setCantidadInput}
-            />
+              <Text style={styles.labelInput}>Cantidad a comprar *</Text>
+              <TextInput
+                style={styles.inputModal}
+                placeholder="Ej: 12"
+                placeholderTextColor="#A0AEC0"
+                keyboardType="number-pad"
+                value={cantidadInput}
+                onChangeText={setCantidadInput}
+                /* set up de teclado con aceptar */
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={Keyboard.dismiss}
+              />
 
-            <Text style={styles.labelInput}>Precio de costo unitario ($)</Text>
-            <TextInput
-              style={styles.inputModal}
-              placeholder="Ej: 850.50"
-              placeholderTextColor="#A0AEC0"
-              keyboardType="decimal-pad"
-              value={precioCostoInput}
-              onChangeText={setPrecioCostoInput}
-            />
+              <Text style={styles.labelInput}>Precio de costo unitario ($)</Text>
+              <TextInput
+                style={styles.inputModal}
+                placeholder="Ej: 850.50"
+                placeholderTextColor="#A0AEC0"
+                keyboardType="decimal-pad"
+                value={precioCostoInput}
+                onChangeText={setPrecioCostoInput}
+                /* [NUEVO] Setup de teclado limpio */
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={Keyboard.dismiss}
+              />
 
-            <View style={styles.modalAcciones}>
-              <TouchableOpacity
-                style={styles.botonCancelar}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.textoBotonCancelar}>Cancelar</Text>
-              </TouchableOpacity>
+              <View style={styles.modalAcciones}>
+                <TouchableOpacity
+                  style={styles.botonCancelar}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.textoBotonCancelar}>Cancelar</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity style={styles.botonGuardar} onPress={handleGuardarEnPlanilla}>
-                <Text style={styles.textoBotonGuardar}>
-                  {esEdicion ? 'Actualizar' : 'Agregar'}
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity style={styles.botonGuardar} onPress={handleGuardarEnPlanilla}>
+                  <Text style={styles.textoBotonGuardar}>
+                    {esEdicion ? 'Actualizar' : 'Agregar'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL 2: INGRESO Y VALIDACIÓN DEL TICKET REAL */}
       <Modal visible={modalConfirmacionVisible} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Confirmar Ingreso de Stock</Text>
-            <Text style={styles.modalSub}>
-              Ingresá el total final que figura en la factura / ticket del mayorista:
-            </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Confirmar Ingreso de Stock</Text>
+              <Text style={styles.modalSub}>
+                Ingresá el total final que figura en la factura / ticket del mayorista:
+              </Text>
 
-            <Text style={styles.labelInput}>Total abonado ($) *</Text>
-            <TextInput
-              style={styles.inputModal}
-              placeholder="0.00"
-              placeholderTextColor="#A0AEC0"
-              keyboardType="decimal-pad"
-              value={montoTicketInput}
-              onChangeText={setMontoTicketInput}
-            />
+              <Text style={styles.labelInput}>Total abonado ($) *</Text>
+              <TextInput
+                style={styles.inputModal}
+                placeholder="0.00"
+                placeholderTextColor="#A0AEC0"
+                keyboardType="decimal-pad"
+                value={montoTicketInput}
+                onChangeText={setMontoTicketInput}
+                /*Setup de teclado con aceptar */
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={Keyboard.dismiss}
+              />
 
-            <Text style={styles.infoPlanillaText}>
-              Total según planilla actual: ${totalCalculado.toLocaleString('es-AR')}
-            </Text>
+              <Text style={styles.infoPlanillaText}>
+                Total según planilla actual: ${totalCalculado.toLocaleString('es-AR')}
+              </Text>
 
-            <View style={styles.modalAcciones}>
-              <TouchableOpacity
-                style={styles.botonCancelar}
-                onPress={() => setModalConfirmacionVisible(false)}
-                disabled={procesando}
-              >
-                <Text style={styles.textoBotonCancelar}>Cancelar</Text>
-              </TouchableOpacity>
+              <View style={styles.modalAcciones}>
+                <TouchableOpacity
+                  style={styles.botonCancelar}
+                  onPress={() => setModalConfirmacionVisible(false)}
+                  disabled={procesando}
+                >
+                  <Text style={styles.textoBotonCancelar}>Cancelar</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.botonGuardar}
-                onPress={handleEjecutarCompra}
-                disabled={procesando}
-              >
-                {procesando ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.textoBotonGuardar}>Confirmar y Cargar</Text>
-                )}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.botonGuardar}
+                  onPress={handleEjecutarCompra}
+                  disabled={procesando}
+                >
+                  {procesando ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.textoBotonGuardar}>Confirmar y Cargar</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL 3: HISTORIAL DE PLANILLAS ARCHIVADAS */}

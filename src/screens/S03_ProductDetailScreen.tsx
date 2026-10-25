@@ -9,7 +9,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -76,6 +76,14 @@ export function S03_ProductDetailScreen(): React.ReactNode {
 
   if (!producto) return null;
 
+  // Manejo seguro de categoría/categorías
+  const nombreCategoria = (
+    producto.categoria ||
+    (Array.isArray(producto.categorias) && producto.categorias.length > 0
+      ? producto.categorias.join(' • ')
+      : 'Sin Categoría')
+  ).toUpperCase();
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -88,7 +96,8 @@ export function S03_ProductDetailScreen(): React.ReactNode {
         )}
 
         <View style={styles.cardInfo}>
-          <Text style={styles.categoria}>{producto.categoria.toUpperCase()}</Text>
+          {/* [FIX TS] Renderizado seguro de categoría con fallback */}
+          <Text style={styles.categoria}>{nombreCategoria}</Text>
           <Text style={styles.nombre}>{producto.nombre}</Text>
           <Text style={styles.precio}>${producto.precio.toLocaleString('es-AR')}</Text>
 

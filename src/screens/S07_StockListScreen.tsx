@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
@@ -25,7 +26,7 @@ type StockNavProp = NativeStackNavigationProp<StockStackParamList>;
 export function S07_StockListScreen() {
   const navigation = useNavigation<StockNavProp>();
   const [productos, setProductos] = useState<Producto[]>([]);
-  // [NUEVO] El carrusel de categorías ahora es dinámico y en tiempo real
+  // El carrusel de categorías ahora es dinámico y en tiempo real
   const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE);
   const [cargando, setCargando] = useState<boolean>(true);
   const [busqueda, setBusqueda] = useState<string>('');
@@ -49,7 +50,7 @@ export function S07_StockListScreen() {
     };
   }, []);
 
-  //Suscripción en tiempo real a las categorías creadas por el usuario
+  // Suscripción en tiempo real a las categorías creadas por el usuario
   useEffect(() => {
     const desuscribirCats = suscribirACategorias((cats: string[]) => {
       setCategoriasBarra(cats);
@@ -170,6 +171,10 @@ export function S07_StockListScreen() {
           value={busqueda}
           onChangeText={setBusqueda}
           autoCapitalize="none"
+          /*set up de teclado con aceptar*/
+          returnKeyType="done"
+          blurOnSubmit={true}
+          onSubmitEditing={Keyboard.dismiss}
         />
       </View>
 
