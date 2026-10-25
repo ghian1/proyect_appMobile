@@ -1,4 +1,4 @@
-import { useHeaderHeight } from '@react-navigation/elements'; // Hook para calcular la altura dinamica del header nativo
+import { useHeaderHeight } from '@react-navigation/elements';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -7,16 +7,16 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Keyboard, // Importado para poder cerrar el teclado con Keyboard.dismiss, fixeo que hicimos gracias a un testeo de usuario
-  KeyboardAvoidingView, // Importado para desplazar la vista cuando emerge el teclado, fixeo que hicimos gracias a un testeo de usuario
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
-  Platform, // Importado para detectar la plataforma (iOS/Android)
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback, // Importado para detectar toques fuera de los inputs
+  TouchableWithoutFeedback,
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -60,7 +60,6 @@ export function S05_AltaEditarScreen() {
   // Suscripción a categorías de Firestore
   useEffect(() => {
     const desuscribirCats = suscribirACategorias((cats: string[]) => {
-      // [FILTRO] Excluimos filtros de estado calculados para que NO se asignen a productos
       const categoriasValidasParaElegir = cats.filter(
         (c: string) => c !== 'Todas' && c !== 'Stock Crítico' && c !== 'Sin Stock'
       );
@@ -131,7 +130,6 @@ export function S05_AltaEditarScreen() {
     }
   };
 
-  // Guardado persistente de nueva categoría en Firestore
   const handleConfirmarNuevaCategoria = async () => {
     if (!nuevaCatTexto.trim()) {
       Alert.alert('Atención', 'Ingresá un nombre para la categoría.');
@@ -178,6 +176,35 @@ export function S05_AltaEditarScreen() {
     } catch (error) {
       console.error('Error al abrir la cámara:', error);
       Alert.alert('Error', 'No se pudo abrir la cámara.');
+    }
+  };
+
+  // NUEVO: Función para seleccionar archivo (PNG/JPG) desde la galería
+  const seleccionarDeGaleria = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permiso necesario',
+          'Se necesitan permisos de acceso a la galería para poder seleccionar la imagen del producto.'
+        );
+        return;
+      }
+
+      const resultado = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!resultado.canceled && resultado.assets && resultado.assets.length > 0) {
+        setImagenUri(resultado.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error al abrir la galería:', error);
+      Alert.alert('Error', 'No se pudo abrir la galería de imágenes.');
     }
   };
 
@@ -238,13 +265,11 @@ export function S05_AltaEditarScreen() {
 
   return (
     <SafeAreaView style={styles.contenedor}>
-      {/* KeyboardAvoidingView para desplazar la pantalla cuando el teclado emerge */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={headerHeight}
       >
-        {/* TouchableWithoutFeedback para cerrar el teclado al tocar fuera de los campos */}
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
             ref={scrollViewRef}
@@ -273,6 +298,15 @@ export function S05_AltaEditarScreen() {
                   <Text style={styles.textoBotonCamara}>📷 Tomar Foto</Text>
                 </TouchableOpacity>
 
+                {/* Botón añadido para galería */}
+                <TouchableOpacity
+                  style={styles.botonGaleria}
+                  onPress={seleccionarDeGaleria}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.textoBotonGaleria}>🖼️ Subir de Galería</Text>
+                </TouchableOpacity>
+
                 {imagenUri && (
                   <TouchableOpacity
                     onPress={() => setImagenUri(null)}
@@ -292,7 +326,6 @@ export function S05_AltaEditarScreen() {
                 placeholderTextColor="#8E8E93"
                 value={nombre}
                 onChangeText={setNombre}
-                /*Se utiliza 'numbers-and-punctuation' para forzar en iOS el mismo teclado moderno con boton 'Done' arriba que Precio/Stock */
                 keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
                 returnKeyType="done"
                 onSubmitEditing={Keyboard.dismiss}
@@ -307,7 +340,7 @@ export function S05_AltaEditarScreen() {
                   return (
                     <TouchableOpacity
                       key={cat}
-                      style={[styles.chip, seleccionada ? styles.chipSeleccionado : null]}                  
+                      style={[styles.chip, seleccionada ? styles.chipSeleccionado : null]}      
                       onPress={() => toggleCategoria(cat)}
                       activeOpacity={0.7}
                     >
@@ -343,7 +376,6 @@ export function S05_AltaEditarScreen() {
                   keyboardType="numeric"
                   value={precioTexto}
                   onChangeText={setPrecioTexto}
-                  /* Cierre de teclado y botón 'Done', aplicar en toda la app, luego de testeos */
                   returnKeyType="done"
                   onSubmitEditing={Keyboard.dismiss}
                 />
@@ -358,7 +390,6 @@ export function S05_AltaEditarScreen() {
                   keyboardType="number-pad"
                   value={stockTexto}
                   onChangeText={setStockTexto}
-                  /* Cierre de teclado y botón 'Done', aplicar en toda la app, luego de testeos */
                   returnKeyType="done"
                   onSubmitEditing={Keyboard.dismiss}
                 />
@@ -378,7 +409,6 @@ export function S05_AltaEditarScreen() {
                     scrollViewRef.current?.scrollToEnd({ animated: true });
                   }, 150);
                 }}
-                /*Forzamos exactamente el mismo teclado con Done arriba y quitamos multiline en iOS que lo bloqueaba */
                 keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
                 multiline={Platform.OS !== 'ios'}
                 numberOfLines={3}
@@ -417,7 +447,6 @@ export function S05_AltaEditarScreen() {
               value={nuevaCatTexto}
               onChangeText={setNuevaCatTexto}
               autoFocus
-              /* Cierre de teclado y botón 'Done' en Modal, aplicar en toda la app, luego de testeos */
               returnKeyType="done"
               onSubmitEditing={Keyboard.dismiss}
             />
@@ -515,6 +544,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   textoBotonCamara: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  botonGaleria: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  textoBotonGaleria: {
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
