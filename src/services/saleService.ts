@@ -1,4 +1,5 @@
-import { addDoc, collection, doc, increment, serverTimestamp, updateDoc } from 'firebase/firestore';
+// NUEVO: Se agrega onSnapshot para suscripción en tiempo real a ventas
+import { addDoc, collection, doc, increment, onSnapshot, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 // ESTRUCTURA DE CADA ÍTEM DEL CARRITO DE VENTAS
@@ -79,4 +80,35 @@ export const registrarVenta = async (
         console.error('Error al registrar la venta en Firestore:', error);
         throw error;
     }
+};
+
+
+// NUEVO: Función para escuchar la colección de ventas en tiempo real para el módulo de Métricas
+export const suscribirAVentas = (
+    onData: (ventas: Venta[]) => void,
+    onError?: (error: Error) => void
+) => {
+    const ref = collection(db, 'ventas');
+    return onSnapshot(
+        ref,
+        (snapshot) => {
+            const lista: Venta[] = snapshot.docs.map((docSnap) => {
+                const data = docSnap.data();
+                return {
+                    id: docSnap.id,
+                    items: data.items || [],
+                    total: Number(data.total) || 0,
+                    medioPago: data.medioPago as MedioPago,
+                    idClienteFiado: data.idClienteFiado || undefined,
+                    nombreClienteFiado: data.nombreClienteFiado || undefined,
+                    fecha: data.fecha,
+                };
+            });
+            onData(lista);
+        },
+        (error) => {
+            console.error('Error en listener de ventas:', error);
+            if (onError) onError(error);
+        }
+    );
 };

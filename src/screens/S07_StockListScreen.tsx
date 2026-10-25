@@ -24,6 +24,9 @@ import { StockStackParamList } from '../types/navigation';
 
 type StockNavProp = NativeStackNavigationProp<StockStackParamList>;
 
+// NUEVO: Estados de stock limpios: 'Todas', 'Stock Crítico' y 'Sin Stock'
+type EstadoStock = 'Todas' | 'Stock Crítico' | 'Sin Stock';
+
 export function S07_StockListScreen() {
   const navigation = useNavigation<StockNavProp>();
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -31,18 +34,18 @@ export function S07_StockListScreen() {
   const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE);
   const [cargando, setCargando] = useState<boolean>(true);
   const [busqueda, setBusqueda] = useState<string>('');
-  //Separamos el estado de stock de las categorías y permitimos multi-selección de rubros
-  const [estadoStockSeleccionado, setEstadoStockSeleccionado] = useState<'Todas' | 'Stock Crítico' | 'Sin Stock'>('Todas');
+  // Separamos el estado de stock de las categorías y permitimos multi-selección de rubros
+  const [estadoStockSeleccionado, setEstadoStockSeleccionado] = useState<EstadoStock>('Todas');
   const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<string[]>([]);
 
-  //Dejamos solo los rubros de productos en la lista para no mezclar con estados de stock
+  // Dejamos solo los rubros de productos en la lista para no mezclar con estados de stock
   const categoriasRubros = useMemo(() => {
     return categoriasBarra.filter(
       (c) => c !== 'Todas' && c !== 'Stock Crítico' && c !== 'Sin Stock'
     );
   }, [categoriasBarra]);
 
-  // NUEVO: Handler toggle para activar o desactivar categorías dinámicamente
+  // Handler toggle para activar o desactivar categorías dinámicamente
   const toggleCategoria = (cat: string) => {
     setCategoriasSeleccionadas((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
@@ -78,14 +81,14 @@ export function S07_StockListScreen() {
     };
   }, []);
 
-  //Filtrado combinado reactivo: texto + estado de stock + categorías múltiples
+  // Filtrado combinado reactivo: texto + estado de stock + categorías múltiples
   const productosFiltrados = useMemo(() => {
     const filtrados = productos.filter((item) => {
       const coincideNombre = item.nombre
         .toLowerCase()
         .includes(busqueda.toLowerCase().trim());
 
-      // NUEVO: Validación del filtro de estado de stock (Todas / Crítico / Sin Stock)
+      // Validación del filtro de estado de stock (Todas / Crítico / Sin Stock)
       let coincideStock = true;
       if (estadoStockSeleccionado === 'Stock Crítico') {
         // [LÓGICA AUTOMÁTICA] Productos con stock entre 1 y 4 unidades
@@ -95,7 +98,7 @@ export function S07_StockListScreen() {
         coincideStock = item.stock <= 0;
       }
 
-      // NUEVO: Validación de categorías múltiples (si hay categorías seleccionadas, buscamos coincidencias)
+      // Validación de categorías múltiples (si hay categorías seleccionadas, buscamos coincidencias)
       let coincideCategoria = true;
       if (categoriasSeleccionadas.length > 0) {
         coincideCategoria = categoriasSeleccionadas.some((catSel) => {
