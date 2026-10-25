@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Keyboard,
   StyleSheet,
   Text,
@@ -137,20 +138,35 @@ export function S07_StockListScreen() {
           }
         }}
       >
-        <View style={styles.cardContenido}>
-          <Text style={styles.cardTitulo} numberOfLines={2}>
-            {item.nombre}
-          </Text>
+        {/* Contenedor de la imagen con fondo blanco estilo e-commerce */}
+        <View style={styles.imagenContenedor}>
+          {item.imagenUrl ? (
+            <Image
+              source={{ uri: item.imagenUrl }}
+              style={styles.imagenProd}
+              resizeMode="contain"
+            />
+          ) : (
+            <Text style={styles.textoSinImagen}>Sin Imagen</Text>
+          )}
+        </View>
 
+        <View style={styles.cardContenido}>
           <Text style={styles.cardCategoria} numberOfLines={1}>
             {Array.isArray(item.categorias) && item.categorias.length > 0
               ? item.categorias.join(' • ')
               : item.categoria || 'Almacén'}
           </Text>
 
+          <Text style={styles.cardTitulo} numberOfLines={2}>
+            {item.nombre}
+          </Text>
+
+          {/* Precio en color neutro (gris oscuro/negro) */}
           <Text style={styles.cardPrecio}>${item.precio.toFixed(2)}</Text>
         </View>
 
+        {/* Stock abajo con color dinámico según unidades */}
         <View style={styles.cardStockContainer}>
           <View
             style={[
@@ -164,7 +180,7 @@ export function S07_StockListScreen() {
                 sinStock ? styles.textoSinStock : styles.textoConStock,
               ]}
             >
-              {sinStock ? 'SIN STOCK' : `${item.stock} u.`}
+              {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} u.`}
             </Text>
           </View>
         </View>
@@ -192,16 +208,14 @@ export function S07_StockListScreen() {
           value={busqueda}
           onChangeText={setBusqueda}
           autoCapitalize="none"
-          /*set up de teclado con aceptar*/
           returnKeyType="done"
           blurOnSubmit={true}
           onSubmitEditing={Keyboard.dismiss}
         />
       </View>
 
-      {/*Rediseño visual de filtros: Segmented Control iOS para estados, separador sutil y FlatList liviano de categorías */}
+      {/* Rediseño visual de filtros */}
       <View style={styles.filtrosContainer}>
-        {/* Fila 1: Segmented Control unificado estilo iOS para Estado de Stock */}
         <View style={styles.segmentedContainer}>
           <TouchableOpacity
             style={[
@@ -266,10 +280,8 @@ export function S07_StockListScreen() {
           </TouchableOpacity>
         </View>
 
-        {/*Línea divisora horizontal muy fina entre Estados y Categorías */}
         <View style={styles.separadorFiltros} />
 
-        {/* Fila 2: Carrusel horizontal FlatList con chips estilizados y livianos */}
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -361,7 +373,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1C1C1E',
   },
-  //Rediseño visual de filtros estilo iOS (Segmented Control + divisor + chips livianos)
   filtrosContainer: {
     backgroundColor: '#FFFFFF',
     paddingBottom: 8,
@@ -453,23 +464,43 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 12,
+    padding: 10,
     width: '48.5%',
     justifyContent: 'space-between',
-    minHeight: 135,
     elevation: 2,
   },
-  cardContenido: { flex: 1 },
-  cardTitulo: { fontSize: 15, fontWeight: '600', color: '#1C1C1E', marginBottom: 4, lineHeight: 19 },
-  cardCategoria: { fontSize: 11, color: '#8E8E93', textTransform: 'uppercase', marginBottom: 6 },
-  cardPrecio: { fontSize: 16, fontWeight: 'bold', color: '#34C759', marginBottom: 8 },
+  imagenContenedor: {
+    width: '100%',
+    height: 100,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  imagenProd: {
+    width: '100%',
+    height: '100%',
+  },
+  textoSinImagen: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+  cardContenido: { flex: 1, marginBottom: 8 },
+  cardCategoria: { fontSize: 10, color: '#8E8E93', textTransform: 'uppercase', marginBottom: 2 },
+  cardTitulo: { fontSize: 14, fontWeight: '600', color: '#1C1C1E', marginBottom: 4, lineHeight: 18 },
+  cardPrecio: { fontSize: 15, fontWeight: '600', color: '#1C1C1E' },
   cardStockContainer: { alignItems: 'flex-start', marginTop: 'auto' },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  badgeConStock: { backgroundColor: '#E8F5E9' },
-  badgeSinStock: { backgroundColor: '#FFEBEE' },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, width: '100%', alignItems: 'center' },
+  badgeConStock: { backgroundColor: '#F3F4F6' }, // Fondo neutro suave cuando hay stock
+  badgeSinStock: { backgroundColor: '#FFEBEE' }, // Fondo rojo suave cuando no hay stock
   badgeTexto: { fontSize: 11, fontWeight: '700' },
-  textoConStock: { color: '#2E7D32' },
-  textoSinStock: { color: '#D32F2F' },
+  textoConStock: { color: '#4B5563' }, // Texto gris neutro oscuro para stock normal
+  textoSinStock: { color: '#D32F2F' }, // Texto rojo intenso para alertas de sin stock
   centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginTop: 40 },
   textoCargando: { marginTop: 10, color: '#8E8E93', fontSize: 14 },
   textoVacio: { color: '#8E8E93', fontSize: 15, textAlign: 'center' },
