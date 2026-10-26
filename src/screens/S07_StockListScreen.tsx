@@ -183,7 +183,7 @@ export function S07_StockListScreen() {
                 sinStock ? styles.textoSinStock : styles.textoConStock,
               ]}
             >
-              {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} u.`}
+              {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} unidades.`}
             </Text>
           </View>
         </View>

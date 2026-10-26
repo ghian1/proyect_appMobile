@@ -5,7 +5,7 @@ import {
     FlatList,
     Image,
     Keyboard,
-    KeyboardAvoidingView, // Importado para ajustar la vista del modal al abrir el teclado
+    KeyboardAvoidingView,
     Modal,
     Platform,
     ScrollView,
@@ -27,18 +27,15 @@ export function S09_VentasScreen() {
     const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE);
     const [cargando, setCargando] = useState<boolean>(true);
     const [busqueda, setBusqueda] = useState<string>('');
-    //Separamos estado de stock y categorías para permitir filtros combinados y selección múltiple
     const [estadoStockSeleccionado, setEstadoStockSeleccionado] = useState<'Todas' | 'Stock Crítico' | 'Sin Stock'>('Todas');
     const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<string[]>([]);
 
-    //Extraemos los rubros excluyendo los filtros de estado para la fila de categorías
     const categoriasRubros = useMemo(() => {
         return categoriasBarra.filter(
             (c) => c !== 'Todas' && c !== 'Stock Crítico' && c !== 'Sin Stock'
         );
     }, [categoriasBarra]);
 
-    //Handler para agregar o remover categorías seleccionadas
     const toggleCategoria = (cat: string) => {
         setCategoriasSeleccionadas((prev) =>
             prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
@@ -47,18 +44,15 @@ export function S09_VentasScreen() {
 
     const [carrito, setCarrito] = useState<{ [idProducto: string]: ItemCarrito }>({});
 
-    // Estados para el flujo de cobro (incluye Transferencia)
     const [modalVisible, setModalVisible] = useState<boolean>(false);
     const [medioPago, setMedioPago] = useState<'Efectivo' | 'Mercado Pago' | 'Transferencia' | 'Fiado'>('Efectivo');
     const [montoPagaCon, setMontoPagaCon] = useState<string>('');
     const [procesandoVenta, setProcesandoVenta] = useState<boolean>(false);
 
-    // Estados para Fiados
     const [listaClientesFiados, setListaClientesFiados] = useState<ClienteFiado[]>([]);
     const [clienteFiadoSeleccionado, setClienteFiadoSeleccionado] = useState<ClienteFiado | null>(null);
     const [busquedaCliente, setBusquedaCliente] = useState<string>('');
 
-    // Sincronización en tiempo real de productos
     useEffect(() => {
         const desuscribir = suscribirAProductos(
             (datos: Producto[]) => {
@@ -76,7 +70,6 @@ export function S09_VentasScreen() {
         };
     }, []);
 
-    // Sincronización en tiempo real de categorías dinámicas
     useEffect(() => {
         const desuscribirCats = suscribirACategorias((cats) => {
             setCategoriasBarra(cats);
@@ -87,7 +80,6 @@ export function S09_VentasScreen() {
         };
     }, []);
 
-    // Sincronización de clientes fiados
     useEffect(() => {
         const desuscribirClientes = subscribeToClientesFiados((clientes) => {
             setListaClientesFiados(clientes);
@@ -98,14 +90,12 @@ export function S09_VentasScreen() {
         };
     }, []);
 
-    //Filtrado combinado reactivo: texto de búsqueda + estado de stock + categorías múltiples
     const productosFiltrados = useMemo(() => {
         const filtrados = productos.filter((item) => {
             const coincideNombre = item.nombre
                 .toLowerCase()
                 .includes(busqueda.toLowerCase().trim());
 
-            // Validación reactiva de condición de stock
             let coincideStock = true;
             if (estadoStockSeleccionado === 'Stock Crítico') {
                 coincideStock = item.stock > 0 && item.stock < 5;
@@ -113,7 +103,6 @@ export function S09_VentasScreen() {
                 coincideStock = item.stock <= 0;
             }
 
-            //Validación de rubros/categorías múltiples seleccionadas (unión OR)
             let coincideCategoria = true;
             if (categoriasSeleccionadas.length > 0) {
                 coincideCategoria = categoriasSeleccionadas.some((catSel) => {
@@ -272,23 +261,49 @@ export function S09_VentasScreen() {
         const cantidadEnCarrito = itemEnCarrito ? itemEnCarrito.cantidad : 0;
 
         return (
-            <View style={[styles.card, sinStock && styles.cardSinStock]}>
+            <View style={styles.card}>
+                {/* Contenedor de la imagen con fondo blanco estilo e-commerce */}
+                <View style={styles.imagenContenedor}>
+                    {item.imagenUrl ? (
+                        <Image
+                            source={{ uri: item.imagenUrl }}
+                            style={styles.imagenProd}
+                            resizeMode="contain"
+                        />
+                    ) : (
+                        <Text style={styles.textoSinImagen}>Sin Imagen</Text>
+                    )}
+                </View>
+
                 <View style={styles.cardInfo}>
-                    <Text style={styles.cardTitulo} numberOfLines={2}>
-                        {item.nombre}
-                    </Text>
                     <Text style={styles.cardCategoria} numberOfLines={1}>
                         {Array.isArray(item.categorias) && item.categorias.length > 0
                             ? item.categorias.join(' • ')
                             : item.categoria || 'Almacén'}
                     </Text>
+
+                    <Text style={styles.cardTitulo} numberOfLines={2}>
+                        {item.nombre}
+                    </Text>
+
+                    {/* Precio en tono neutro */}
                     <Text style={styles.cardPrecio}>${item.precio.toFixed(2)}</Text>
                 </View>
 
+                {/* Indicador de stock actual para control del vendedor */}
+                <View style={styles.cardStockContainer}>
+                    <View style={[styles.badgeStock, sinStock ? styles.badgeSinStock : styles.badgeConStock]}>
+                        <Text style={[styles.textoBadgeStock, sinStock ? styles.textoSinStock : styles.textoConStock]}>
+                            {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} unidades.`}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Botones de control / Agregar al carrito */}
                 <View style={styles.cardAcciones}>
                     {sinStock ? (
-                        <View style={styles.badgeSinStock}>
-                            <Text style={styles.textoSinStock}>SIN STOCK</Text>
+                        <View style={styles.bloqueAgotado}>
+                            <Text style={styles.textoAgotado}>Agotado</Text>
                         </View>
                     ) : cantidadEnCarrito > 0 ? (
                         <View style={styles.selectorCantidad}>
@@ -313,7 +328,7 @@ export function S09_VentasScreen() {
                             style={styles.botonAgregarDirecto}
                             onPress={() => agregarAlCarrito(item)}
                         >
-                            <Text style={styles.textoAgregarDirecto}>+ Agregar</Text>
+                            <Text style={styles.textoAgregarDirecto}>Agregar</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -331,16 +346,13 @@ export function S09_VentasScreen() {
                     value={busqueda}
                     onChangeText={setBusqueda}
                     autoCapitalize="none"
-                    /* Setup de teclado limpio para el buscador de ventas */
                     returnKeyType="done"
                     blurOnSubmit={true}
                     onSubmitEditing={Keyboard.dismiss}
                 />
             </View>
 
-            {/* Rediseño visual de filtros: Segmented Control iOS para estados, separador sutil y FlatList liviano de categorías */}
             <View style={styles.filtrosContainer}>
-                {/* Fila 1: Segmented Control unificado estilo iOS para Estado de Stock */}
                 <View style={styles.segmentedContainer}>
                     <TouchableOpacity
                         style={[
@@ -405,10 +417,8 @@ export function S09_VentasScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/*Separador sutil para marcar la jerarquía entre estados y categorías */}
                 <View style={styles.separadorFiltros} />
 
-                {/* Fila 2: Carrusel horizontal FlatList con chips estilizados y livianos */}
                 <FlatList
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -485,7 +495,6 @@ export function S09_VentasScreen() {
 
             {/* MODAL PRINCIPAL DE COBRO */}
             <Modal visible={modalVisible} animationType="slide" transparent>
-                {/*KeyboardAvoidingView dentro del modal para que los inputs de Efectivo y Fiados suban sobre el teclado */}
                 <KeyboardAvoidingView
                     style={{ flex: 1 }}
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -517,7 +526,6 @@ export function S09_VentasScreen() {
                                 </View>
 
                                 <Text style={styles.labelSeccion}>Medio de Pago:</Text>
-                                {/* SELECTOR DE MEDIOS DE PAGO (4 OPCIONES) */}
                                 <View style={styles.contenedorMediosPago}>
                                     {(['Efectivo', 'Mercado Pago', 'Transferencia', 'Fiado'] as const).map((m) => (
                                         <TouchableOpacity
@@ -538,7 +546,6 @@ export function S09_VentasScreen() {
                                     ))}
                                 </View>
 
-                                {/* VISTA DIRECTA DEL QR AL SELECCIONAR MERCADO PAGO */}
                                 {medioPago === 'Mercado Pago' && (
                                     <View style={styles.seccionMP}>
                                         <Text style={styles.instruccionQR}>Escaneá para abonar ${totalImporte.toFixed(2)}</Text>
@@ -554,7 +561,6 @@ export function S09_VentasScreen() {
                                     </View>
                                 )}
 
-                                {/* VISTA INFORMATIVA PARA TRANSFERENCIA */}
                                 {medioPago === 'Transferencia' && (
                                     <View style={styles.seccionTransferencia}>
                                         <Text style={styles.tituloTransferencia}>Cobro por Transferencia Bancaria</Text>
@@ -575,7 +581,6 @@ export function S09_VentasScreen() {
                                             placeholderTextColor="#8E8E93"
                                             value={busquedaCliente}
                                             onChangeText={setBusquedaCliente}
-                                            /* Setup de teclado limpio para la busqueda de cliente fiado */
                                             returnKeyType="done"
                                             blurOnSubmit={true}
                                             onSubmitEditing={Keyboard.dismiss}
@@ -623,7 +628,6 @@ export function S09_VentasScreen() {
                                             keyboardType="numeric"
                                             value={montoPagaCon}
                                             onChangeText={setMontoPagaCon}
-                                            /* Setup de teclado limpio para el input numérico de efectivo */
                                             returnKeyType="done"
                                             blurOnSubmit={true}
                                             onSubmitEditing={Keyboard.dismiss}
@@ -676,7 +680,6 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#1C1C1E',
     },
-    
     filtrosContainer: {
         backgroundColor: '#FFFFFF',
         paddingBottom: 8,
@@ -763,30 +766,59 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontWeight: '600',
     },
-    listaProductos: { padding: 12, paddingBottom: 90 },
+    listaProductos: { padding: 12, paddingBottom: 100 },
     filaGrid: { justifyContent: 'space-between', marginBottom: 12 },
     card: {
         backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        padding: 12,
+        padding: 10,
         width: '48.5%',
         justifyContent: 'space-between',
-        minHeight: 145,
         elevation: 2,
     },
-    cardSinStock: { opacity: 0.6 },
-    cardInfo: { flex: 1 },
-    cardTitulo: { fontSize: 15, fontWeight: '600', color: '#1C1C1E', marginBottom: 2 },
-    cardCategoria: { fontSize: 11, color: '#8E8E93', textTransform: 'uppercase', marginBottom: 4 },
-    cardPrecio: { fontSize: 16, fontWeight: 'bold', color: '#34C759', marginBottom: 6 },
-    cardAcciones: { marginTop: 'auto' },
-    botonAgregarDirecto: {
-        backgroundColor: '#34C759',
+    imagenContenedor: {
+        width: '100%',
+        height: 100,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    imagenProd: {
+        width: '100%',
+        height: '100%',
+    },
+    textoSinImagen: {
+        fontSize: 10,
+        color: '#9CA3AF',
+        textAlign: 'center',
+    },
+    cardInfo: { flex: 1, marginBottom: 6 },
+    cardCategoria: { fontSize: 10, color: '#8E8E93', textTransform: 'uppercase', marginBottom: 2 },
+    cardTitulo: { fontSize: 14, fontWeight: '600', color: '#1C1C1E', marginBottom: 4, lineHeight: 18 },
+    cardPrecio: { fontSize: 15, fontWeight: '600', color: '#1C1C1E' },
+    
+    // Estilos del indicador de stock para control del vendedor
+    cardStockContainer: { marginBottom: 8 },
+    badgeStock: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, alignItems: 'center' },
+    badgeConStock: { backgroundColor: '#F3F4F6' },
+    badgeSinStock: { backgroundColor: '#FFEBEE' },
+    textoBadgeStock: { fontSize: 11, fontWeight: '600' },
+    textoConStock: { color: '#4B5563' },
+    textoSinStock: { color: '#D32F2F' },
+
+    cardAcciones: { alignItems: 'stretch', marginTop: 'auto' },
+    bloqueAgotado: {
+        backgroundColor: '#F3F4F6',
         paddingVertical: 8,
         borderRadius: 8,
         alignItems: 'center',
     },
-    textoAgregarDirecto: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 13 },
+    textoAgotado: { color: '#9CA3AF', fontSize: 13, fontWeight: '600' },
     selectorCantidad: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -795,125 +827,163 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         padding: 4,
     },
-    botonRestar: { backgroundColor: '#FF3B30', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-    textoBotonRestar: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
+    botonRestar: {
+        backgroundColor: '#E5E5EA',
+        width: 28,
+        height: 28,
+        borderRadius: 6,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    textoBotonRestar: { fontSize: 16, fontWeight: 'bold', color: '#1C1C1E' },
     textoCantidad: { fontSize: 14, fontWeight: 'bold', color: '#1C1C1E' },
-    botonSumarPequeno: { backgroundColor: '#34C759', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-    textoBotonSumar: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
-    badgeSinStock: { backgroundColor: '#FFEBEE', padding: 6, borderRadius: 6, alignItems: 'center' },
-    textoSinStock: { color: '#D32F2F', fontSize: 11, fontWeight: 'bold' },
+    botonSumarPequeno: {
+        backgroundColor: '#007AFF',
+        width: 28,
+        height: 28,
+        borderRadius: 6,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    textoBotonSumar: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
+    botonAgregarDirecto: {
+        backgroundColor: '#007AFF',
+        paddingVertical: 8,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    textoAgregarDirecto: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+    centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginTop: 40 },
+    textoCargando: { marginTop: 10, color: '#8E8E93', fontSize: 14 },
     barraCarritoFlotante: {
         position: 'absolute',
-        bottom: 20,
+        bottom: 16,
         left: 16,
         right: 16,
         backgroundColor: '#1C1C1E',
         borderRadius: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        padding: 14,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        elevation: 5,
+        elevation: 6,
     },
     textoItemsCarrito: { color: '#8E8E93', fontSize: 12 },
     textoTotalCarrito: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
-    botonVerCarrito: { backgroundColor: '#34C759', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-    textoBotonVerCarrito: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 },
-    modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    modalContenido: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '85%' },
-    modalTitulo: { fontSize: 20, fontWeight: 'bold', color: '#1C1C1E', marginBottom: 12 },
-    scrollModal: { maxHeight: 110 },
-    filaItemCarrito: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-    itemNombre: { fontSize: 14, fontWeight: '600', color: '#1C1C1E' },
+    botonVerCarrito: {
+        backgroundColor: '#34C759',
+        paddingHorizontal: 18,
+        paddingVertical: 10,
+        borderRadius: 10,
+    },
+    textoBotonVerCarrito: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
+    modalFondo: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContenido: {
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 20,
+        maxHeight: '85%',
+    },
+    modalTitulo: { fontSize: 18, fontWeight: 'bold', color: '#1C1C1E', marginBottom: 12 },
+    scrollModal: { maxHeight: 150, marginBottom: 10 },
+    filaItemCarrito: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 6,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    itemNombre: { fontSize: 14, color: '#1C1C1E', fontWeight: '500' },
     itemDetalle: { fontSize: 12, color: '#8E8E93' },
     itemSubtotal: { fontSize: 14, fontWeight: 'bold', color: '#1C1C1E' },
-    divisor: { height: 1, backgroundColor: '#E5E5EA', marginVertical: 10 },
-    filaTotal: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    labelTotal: { fontSize: 15, fontWeight: 'bold', color: '#8E8E93' },
+    divisor: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 10 },
+    filaTotal: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+    labelTotal: { fontSize: 15, fontWeight: 'bold', color: '#3A3A3C' },
     valorTotal: { fontSize: 20, fontWeight: 'bold', color: '#34C759' },
-    labelSeccion: { fontSize: 14, fontWeight: '600', color: '#1C1C1E', marginBottom: 8 },
-    contenedorMediosPago: { flexDirection: 'row', gap: 6, marginBottom: 12 },
-    chipPago: { flex: 1, paddingVertical: 9, paddingHorizontal: 4, borderRadius: 8, backgroundColor: '#E5E5EA', alignItems: 'center' },
-    chipPagoActivo: { backgroundColor: '#007AFF' },
-    textoChipPago: { fontSize: 11, fontWeight: '600', color: '#3A3A3C' },
-    textoChipPagoActivo: { color: '#FFFFFF', fontWeight: 'bold' },
-
-    seccionMP: {
-        backgroundColor: '#F2F9FF',
-        padding: 12,
-        borderRadius: 12,
-        marginBottom: 12,
+    labelSeccion: { fontSize: 14, fontWeight: '600', color: '#3A3A3C', marginBottom: 8 },
+    contenedorMediosPago: { flexDirection: 'row', gap: 6, marginBottom: 14 },
+    chipPago: {
+        flex: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 4,
+        borderRadius: 8,
+        backgroundColor: '#F2F4F7',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#009EE3',
+        borderColor: '#E5E7EB',
     },
-    instruccionQR: { fontSize: 13, fontWeight: '600', color: '#007AFF', marginBottom: 8 },
-    contenedorImagenQR: {
-        padding: 8,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#D1D1D6',
-    },
-    imagenQR: { width: 150, height: 150 },
-    alertaMP: { marginTop: 8, fontSize: 11, color: '#8E8E93', textAlign: 'center' },
-
-    // Estilos para la sección Transferencia
-    seccionTransferencia: {
-        backgroundColor: '#F2F4F7',
-        padding: 12,
-        borderRadius: 10,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#D1D1D6',
-    },
-    tituloTransferencia: { fontSize: 13, fontWeight: 'bold', color: '#1C1C1E', marginBottom: 4 },
-    montoTransferencia: { fontSize: 14, fontWeight: 'bold', color: '#34C759', marginBottom: 6 },
-    alertaTransferencia: { fontSize: 11, color: '#8E8E93' },
-
-    seccionFiado: { marginBottom: 16 },
+    chipPagoActivo: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
+    textoChipPago: { fontSize: 12, color: '#4B5563', fontWeight: '500' },
+    textoChipPagoActivo: { color: '#FFFFFF', fontWeight: 'bold' },
+    seccionMP: { alignItems: 'center', marginVertical: 10 },
+    instruccionQR: { fontSize: 13, color: '#3A3A3C', marginBottom: 8, fontWeight: '500' },
+    contenedorImagenQR: { padding: 8, backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+    imagenQR: { width: 140, height: 140 },
+    alertaMP: { fontSize: 11, color: '#8E8E93', marginTop: 6, textAlign: 'center' },
+    seccionTransferencia: { backgroundColor: '#F8FAFC', padding: 12, borderRadius: 8, marginBottom: 12 },
+    tituloTransferencia: { fontSize: 14, fontWeight: 'bold', color: '#1C1C1E', marginBottom: 4 },
+    montoTransferencia: { fontSize: 15, fontWeight: 'bold', color: '#007AFF', marginBottom: 6 },
+    alertaTransferencia: { fontSize: 12, color: '#64748B', lineHeight: 16 },
+    seccionFiado: { marginBottom: 12 },
+    labelInput: { fontSize: 13, fontWeight: '600', color: '#3A3A3C', marginBottom: 6 },
     inputBuscadorCliente: {
         backgroundColor: '#F2F4F7',
         borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 7,
-        fontSize: 13,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 14,
         color: '#1C1C1E',
         marginBottom: 8,
     },
-    scrollClientes: { maxHeight: 110 },
-    textoSinClientes: { fontSize: 13, color: '#8E8E93', fontStyle: 'italic', paddingVertical: 8 },
+    scrollClientes: { maxHeight: 120 },
     tarjetaClienteFiado: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 10,
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#E5E5EA',
+        backgroundColor: '#F9FAFB',
         marginBottom: 6,
-        backgroundColor: '#FAFAFA',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
     },
-    tarjetaClienteSeleccionado: {
-        borderColor: '#007AFF',
-        backgroundColor: '#EBF5FF',
-    },
+    tarjetaClienteSeleccionado: { backgroundColor: '#EFF6FF', borderColor: '#007AFF' },
     nombreCliente: { fontSize: 14, fontWeight: '600', color: '#1C1C1E' },
     textoClienteSeleccionado: { color: '#007AFF' },
-    deudaCliente: { fontSize: 11, color: '#8E8E93' },
-    checkSeleccionado: { fontSize: 16, fontWeight: 'bold', color: '#007AFF' },
-
-    seccionEfectivo: { marginBottom: 16 },
-    labelInput: { fontSize: 13, fontWeight: '500', color: '#3A3A3C', marginBottom: 4 },
-    inputEfectivo: { borderWidth: 1, borderColor: '#D1D1D6', borderRadius: 8, padding: 10, fontSize: 16, color: '#1C1C1E' },
-    textoVuelto: { marginTop: 6, fontSize: 14, fontWeight: 'bold', color: '#34C759' },
-    botonesModal: { flexDirection: 'row', gap: 12, marginTop: 4 },
-    botonCancelarModal: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#E5E5EA', alignItems: 'center' },
-    textoCancelar: { fontWeight: '600', color: '#3A3A3C' },
-    botonCobrarModal: { flex: 2, paddingVertical: 12, borderRadius: 10, backgroundColor: '#34C759', alignItems: 'center' },
-    botonDeshabilitado: { backgroundColor: '#9EBAE4' },
+    deudaCliente: { fontSize: 12, color: '#8E8E93', marginTop: 2 },
+    checkSeleccionado: { color: '#007AFF', fontWeight: 'bold', fontSize: 16 },
+    seccionEfectivo: { marginBottom: 12 },
+    inputEfectivo: {
+        backgroundColor: '#F2F4F7',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 15,
+        color: '#1C1C1E',
+    },
+    textoVuelto: { fontSize: 13, fontWeight: 'bold', color: '#34C759', marginTop: 6 },
+    botonesModal: { flexDirection: 'row', gap: 12, marginTop: 10 },
+    botonCancelarModal: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 8,
+        backgroundColor: '#E5E5EA',
+        alignItems: 'center',
+    },
+    textoCancelar: { color: '#3A3A3C', fontWeight: '600', fontSize: 15 },
+    botonCobrarModal: {
+        flex: 2,
+        paddingVertical: 12,
+        borderRadius: 8,
+        backgroundColor: '#34C759',
+        alignItems: 'center',
+    },
     textoCobrar: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
-    centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-    textoCargando: { marginTop: 10, color: '#8E8E93', fontSize: 14 },
+    botonDeshabilitado: { backgroundColor: '#9EBAE4' },
 });

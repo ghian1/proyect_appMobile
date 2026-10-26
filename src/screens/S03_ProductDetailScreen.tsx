@@ -76,6 +76,11 @@ export function S03_ProductDetailScreen(): React.ReactNode {
 
   if (!producto) return null;
 
+  // Lógica de colores dinámicos para el stock
+  const stock = producto.stock || 0;
+  const esSinStock = stock <= 0;
+  const esCritico = stock > 0 && stock <= 5;
+
   // Manejo seguro de categoría/categorías
   const nombreCategoria = (
     producto.categoria ||
@@ -96,7 +101,6 @@ export function S03_ProductDetailScreen(): React.ReactNode {
         )}
 
         <View style={styles.cardInfo}>
-          {/* [FIX TS] Renderizado seguro de categoría con fallback */}
           <Text style={styles.categoria}>{nombreCategoria}</Text>
           <Text style={styles.nombre}>{producto.nombre}</Text>
           <Text style={styles.precio}>${producto.precio.toLocaleString('es-AR')}</Text>
@@ -105,9 +109,30 @@ export function S03_ProductDetailScreen(): React.ReactNode {
 
           <View style={styles.row}>
             <Text style={styles.label}>Stock Disponible:</Text>
-            <Text style={[styles.valorStock, producto.stock <= 0 && styles.stockAgotado]}>
-              {producto.stock} unidades
-            </Text>
+            {/* Badge dinámico con colores para Rojo, Naranja y Verde */}
+            <View
+              style={[
+                styles.badgeStock,
+                esSinStock
+                  ? styles.badgeSinStock
+                  : esCritico
+                  ? styles.badgeCritico
+                  : styles.badgeNormal,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.textoBadgeStock,
+                  esSinStock
+                    ? styles.textoSinStock
+                    : esCritico
+                    ? styles.textoCritico
+                    : styles.textoNormal,
+                ]}
+              >
+                {esSinStock ? 'SIN STOCK' : `${stock} unidades`}
+              </Text>
+            </View>
           </View>
 
           {producto.descripcion ? (
@@ -159,12 +184,40 @@ const styles = StyleSheet.create({
   },
   categoria: { fontSize: 12, fontWeight: 'bold', color: '#007AFF', marginBottom: 4 },
   nombre: { fontSize: 22, fontWeight: 'bold', color: '#1A1A1A' },
-  precio: { fontSize: 20, fontWeight: '600', color: '#10B981', marginTop: 6 },
+  precio: { fontSize: 20, fontWeight: '600', color: '#1C1C1E', marginTop: 6 },
   separator: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 14 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   label: { fontSize: 14, color: '#666', fontWeight: '500' },
-  valorStock: { fontSize: 16, fontWeight: 'bold', color: '#1F2937' },
-  stockAgotado: { color: '#EF4444' },
+  
+  // Estilos para los estados dinámicos del badge de stock
+  badgeStock: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  badgeSinStock: {
+    backgroundColor: '#FFEBEE', // Fondo rojo suave
+  },
+  badgeCritico: {
+    backgroundColor: '#FFEDD5', // Fondo naranja/ámbar suave
+  },
+  badgeNormal: {
+    backgroundColor: '#E8F5E9', // Fondo verde suave
+  },
+  textoBadgeStock: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  textoSinStock: {
+    color: '#D32F2F', // Rojo fuerte
+  },
+  textoCritico: {
+    color: '#C2410C', // Naranja/Marrón fuerte
+  },
+  textoNormal: {
+    color: '#2E7D32', // Verde fuerte
+  },
+
   seccionDesc: { marginTop: 12 },
   descripcion: { fontSize: 14, color: '#4B5563', marginTop: 4, lineHeight: 20 },
   acciones: { gap: 10 },
