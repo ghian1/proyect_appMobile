@@ -20,7 +20,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import {
   actualizarProducto,
   crearCategoriaBD,
@@ -30,7 +29,7 @@ import {
 } from '../services/productService';
 import { StockStackParamList } from '../types/navigation';
 import { sanearEntero, sanearImporte } from '../utils/sanitizers';
-
+a
 type ScreenRouteProp = RouteProp<StockStackParamList, 'ProductEdit'>;
 type ScreenNavProp = NativeStackNavigationProp<StockStackParamList, 'ProductEdit'>;
 

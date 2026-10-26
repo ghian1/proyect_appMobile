@@ -13,11 +13,10 @@ export type RootStackParamList = {
   ComprasFlow: undefined;
 };
 
-// 2. Solapas del pie de pantalla
+//Solapas principales del pie de pantalla simplificadas a 2 pestañas: Inicio y Métricas. Antes eran Inicio, Para reponer, Perfil. A futuro implementaremos Perfil como la tercera. 
 export type MainTabParamList = {
   S02_Inicio: undefined;
-  S04_Reponer: undefined;
-  S06_Perfil: undefined;
+  S11_Metricas: undefined;
 };
 
 // 3. Pantallas internas del módulo Stock
