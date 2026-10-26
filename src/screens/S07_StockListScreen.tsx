@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HeaderBackButton } from '../components/HeaderBackButton';
 import {
   CATEGORIAS_BASE,
   Producto,
@@ -24,7 +25,7 @@ import { StockStackParamList } from '../types/navigation';
 
 type StockNavProp = NativeStackNavigationProp<StockStackParamList>;
 
-// NUEVO: Estados de stock limpios: 'Todas', 'Stock Crítico' y 'Sin Stock'
+//Estados de stock limpios: 'Todas', 'Stock Crítico' y 'Sin Stock'
 type EstadoStock = 'Todas' | 'Stock Crítico' | 'Sin Stock';
 
 export function S07_StockListScreen() {
@@ -37,6 +38,13 @@ export function S07_StockListScreen() {
   // Separamos el estado de stock de las categorías y permitimos multi-selección de rubros
   const [estadoStockSeleccionado, setEstadoStockSeleccionado] = useState<EstadoStock>('Todas');
   const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<string[]>([]);
+
+  //Botón de retroceso hacia la pantalla de Inicio
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => <HeaderBackButton />,
+    });
+  }, [navigation]);
 
   // Dejamos solo los rubros de productos en la lista para no mezclar con estados de stock
   const categoriasRubros = useMemo(() => {
@@ -130,6 +138,8 @@ export function S07_StockListScreen() {
 
   const renderProducto = ({ item }: { item: Producto }) => {
     const sinStock = item.stock <= 0;
+    //Validación de stock crítico (entre 1 y 4 unidades)
+    const esCritico = item.stock > 0 && item.stock < 5;
 
     return (
       <TouchableOpacity
@@ -174,7 +184,11 @@ export function S07_StockListScreen() {
           <View
             style={[
               styles.badge,
-              sinStock ? styles.badgeSinStock : styles.badgeConStock,
+              sinStock
+                ? styles.badgeSinStock
+                : esCritico
+                ? styles.badgeCritico
+                : styles.badgeConStock,
             ]}
           >
             <Text
@@ -183,7 +197,16 @@ export function S07_StockListScreen() {
                 sinStock ? styles.textoSinStock : styles.textoConStock,
               ]}
             >
-              {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} unidades.`}
+              {sinStock ? (
+                'SIN STOCK'
+              ) : (
+                <>
+                  Stock:{' '}
+                  <Text style={esCritico ? styles.textoStockCritico : styles.textoConStock}>
+                    {item.stock} unidades.
+                  </Text>
+                </>
+              )}
             </Text>
           </View>
         </View>
@@ -500,9 +523,11 @@ const styles = StyleSheet.create({
   cardStockContainer: { alignItems: 'flex-start', marginTop: 'auto' },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, width: '100%', alignItems: 'center' },
   badgeConStock: { backgroundColor: '#F3F4F6' }, // Fondo neutro suave cuando hay stock
+  badgeCritico: { backgroundColor: '#FFEDD5' }, // Fondo naranja suave para stock crítico
   badgeSinStock: { backgroundColor: '#FFEBEE' }, // Fondo rojo suave cuando no hay stock
   badgeTexto: { fontSize: 11, fontWeight: '700' },
   textoConStock: { color: '#4B5563' }, // Texto gris neutro oscuro para stock normal
+  textoStockCritico: { color: '#EA580C', fontWeight: '700' }, // Naranja vibrante para cantidad crítica
   textoSinStock: { color: '#D32F2F' }, // Texto rojo intenso para alertas de sin stock
   centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginTop: 40 },
   textoCargando: { marginTop: 10, color: '#8E8E93', fontSize: 14 },

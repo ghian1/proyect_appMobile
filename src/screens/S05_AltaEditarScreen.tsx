@@ -29,7 +29,7 @@ import {
 } from '../services/productService';
 import { StockStackParamList } from '../types/navigation';
 import { sanearEntero, sanearImporte } from '../utils/sanitizers';
-a
+
 type ScreenRouteProp = RouteProp<StockStackParamList, 'ProductEdit'>;
 type ScreenNavProp = NativeStackNavigationProp<StockStackParamList, 'ProductEdit'>;
 
@@ -178,7 +178,7 @@ export function S05_AltaEditarScreen() {
     }
   };
 
-  // NUEVO: Función para seleccionar archivo (PNG/JPG) desde la galería
+  //Función para seleccionar archivo (PNG/JPG) desde la galería
   const seleccionarDeGaleria = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();

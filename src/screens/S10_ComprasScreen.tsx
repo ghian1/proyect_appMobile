@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +16,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { HeaderBackButton } from '../components/HeaderBackButton';
 import {
   confirmarCompraYSumarStock,
   guardarPlanillaBorrador,
@@ -26,6 +28,14 @@ import { Producto, suscribirAProductos } from '../services/productService';
 import { sanearEntero, sanearImporte } from '../utils/sanitizers';
 
 export default function S10_ComprasScreen(): React.ReactNode {
+  const navigation = useNavigation<any>();
+
+  //Botón de retroceso hacia la pantalla de Inicio
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => <HeaderBackButton />,
+    });
+  }, [navigation]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [cargandoProductos, setCargandoProductos] = useState(true);
@@ -96,7 +106,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
   const abrirModalProducto = (prod: Producto) => {
     setProductoSeleccionado(prod);
     setCantidadInput('');
-    /* [NUEVO FIX TS] Acceso seguro a precioCosto con casting para resolver el error de TypeScript */
+    /*Acceso seguro a precioCosto con casting para resolver el error de TypeScript */
     const precioCostoVal = (prod as any).precioCosto;
     setPrecioCostoInput(precioCostoVal ? precioCostoVal.toString() : '');
     setEsEdicion(false);

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -18,11 +19,20 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HeaderBackButton } from '../components/HeaderBackButton';
 import { ClienteFiado, subscribeToClientesFiados } from '../services/fiadoService';
 import { CATEGORIAS_BASE, Producto, suscribirACategorias, suscribirAProductos } from '../services/productService';
 import { ItemCarrito, registrarVenta } from '../services/saleService';
 
 export function S09_VentasScreen() {
+    const navigation = useNavigation<any>();
+
+    //Botón de retroceso hacia la pantalla de Inicio
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerLeft: () => <HeaderBackButton />,
+        });
+    }, [navigation]);
     const [productos, setProductos] = useState<Producto[]>([]);
     const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE);
     const [cargando, setCargando] = useState<boolean>(true);
@@ -257,6 +267,8 @@ export function S09_VentasScreen() {
 
     const renderProductoItem = ({ item }: { item: Producto }) => {
         const sinStock = item.stock <= 0;
+        // NUEVO: Identificación de stock crítico (entre 1 y 4 unidades)
+        const esCritico = item.stock > 0 && item.stock < 5;
         const itemEnCarrito = item.id ? carrito[item.id] : undefined;
         const cantidadEnCarrito = itemEnCarrito ? itemEnCarrito.cantidad : 0;
 
@@ -292,9 +304,27 @@ export function S09_VentasScreen() {
 
                 {/* Indicador de stock actual para control del vendedor */}
                 <View style={styles.cardStockContainer}>
-                    <View style={[styles.badgeStock, sinStock ? styles.badgeSinStock : styles.badgeConStock]}>
+                    <View
+                        style={[
+                            styles.badgeStock,
+                            sinStock
+                                ? styles.badgeSinStock
+                                : esCritico
+                                ? styles.badgeCritico
+                                : styles.badgeConStock,
+                        ]}
+                    >
                         <Text style={[styles.textoBadgeStock, sinStock ? styles.textoSinStock : styles.textoConStock]}>
-                            {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} unidades.`}
+                            {sinStock ? (
+                                'SIN STOCK'
+                            ) : (
+                                <>
+                                    Stock:{' '}
+                                    <Text style={esCritico ? styles.textoStockCritico : styles.textoConStock}>
+                                        {item.stock} unidades.
+                                    </Text>
+                                </>
+                            )}
                         </Text>
                     </View>
                 </View>
@@ -806,9 +836,11 @@ const styles = StyleSheet.create({
     cardStockContainer: { marginBottom: 8 },
     badgeStock: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, alignItems: 'center' },
     badgeConStock: { backgroundColor: '#F3F4F6' },
+    badgeCritico: { backgroundColor: '#FFEDD5' },
     badgeSinStock: { backgroundColor: '#FFEBEE' },
     textoBadgeStock: { fontSize: 11, fontWeight: '600' },
     textoConStock: { color: '#4B5563' },
+    textoStockCritico: { color: '#EA580C', fontWeight: '700' },
     textoSinStock: { color: '#D32F2F' },
 
     cardAcciones: { alignItems: 'stretch', marginTop: 'auto' },
@@ -986,4 +1018,5 @@ const styles = StyleSheet.create({
     },
     textoCobrar: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
     botonDeshabilitado: { backgroundColor: '#9EBAE4' },
+    textoSinClientes: { textAlign: 'center', color: '#8E8E93', fontSize: 13, paddingVertical: 12 },
 });
