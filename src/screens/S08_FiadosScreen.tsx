@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -170,22 +171,23 @@ export default function S08_FiadosScreen(): React.ReactNode {
       <View style={styles.infoCliente}>
         <View style={styles.headerInfoCliente}>
           <Text style={styles.nombreCliente}>{item.nombre}</Text>
-          {/* Botón rápido para eliminar cliente */}
           <TouchableOpacity
             style={styles.btnEliminar}
             onPress={() => handleEliminarCliente(item)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.textoBtnEliminar}>🗑️</Text>
+            <Ionicons name="trash-outline" size={16} color="#EF4444" />
           </TouchableOpacity>
         </View>
 
         {item.telefono ? (
-          <Text style={styles.telefonoCliente}>📞 {item.telefono}</Text>
+          <Text style={styles.telefonoCliente}>
+            <Ionicons name="call-outline" size={12} color="#64748B" /> {item.telefono}
+          </Text>
         ) : null}
         {item.notas ? (
           <Text style={styles.notasCliente} numberOfLines={1}>
-            📝 {item.notas}
+            <Ionicons name="document-text-outline" size={12} color="#64748B" /> {item.notas}
           </Text>
         ) : null}
       </View>
@@ -205,6 +207,7 @@ export default function S08_FiadosScreen(): React.ReactNode {
           <TouchableOpacity
             style={[styles.btnMini, styles.btnRestar]}
             onPress={() => abrirModalSaldo(item, 'PAGO')}
+            activeOpacity={0.8}
           >
             <Text style={styles.textoBtnMini}>Cobrar</Text>
           </TouchableOpacity>
@@ -212,6 +215,7 @@ export default function S08_FiadosScreen(): React.ReactNode {
           <TouchableOpacity
             style={[styles.btnMini, styles.btnSumar]}
             onPress={() => abrirModalSaldo(item, 'FIADO')}
+            activeOpacity={0.8}
           >
             <Text style={styles.textoBtnMini}>+ Fiar</Text>
           </TouchableOpacity>
@@ -225,28 +229,39 @@ export default function S08_FiadosScreen(): React.ReactNode {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={{ flex: 1 }}>
           <View style={styles.header}>
-            <TextInput
-              style={styles.inputBuscador}
-              placeholder="Buscar cliente..."
-              placeholderTextColor="#888"
-              value={busqueda}
-              onChangeText={setBusqueda}
-              /*Setup de teclado con boton aceptar para buscador principal de clientes */
-              returnKeyType="done"
-              blurOnSubmit={true}
-              onSubmitEditing={Keyboard.dismiss}
-            />
+            <View style={styles.inputBuscadorWrapper}>
+              <Ionicons name="search-outline" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.inputBuscador}
+                placeholder="Buscar cliente..."
+                placeholderTextColor="#94A3B8"
+                value={busqueda}
+                onChangeText={setBusqueda}
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={Keyboard.dismiss}
+              />
+              {busqueda.length > 0 && (
+                <TouchableOpacity onPress={() => setBusqueda('')}>
+                  <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+            </View>
+
             <TouchableOpacity
               style={styles.botonNuevo}
               onPress={() => setModalClienteVisible(true)}
+              activeOpacity={0.8}
             >
-              <Text style={styles.textoBotonNuevo}>+ Cliente</Text>
+              <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Text style={styles.textoBotonNuevo}>Cliente</Text>
             </TouchableOpacity>
           </View>
 
           {cargando ? (
             <View style={styles.center}>
-              <ActivityIndicator size="large" color="#007AFF" />
+              <ActivityIndicator size="large" color="#0284C7" />
+              <Text style={styles.textoCargando}>Cargando libreta...</Text>
             </View>
           ) : (
             <FlatList
@@ -254,12 +269,16 @@ export default function S08_FiadosScreen(): React.ReactNode {
               keyExtractor={(item) => item.id || Math.random().toString()}
               renderItem={renderItem}
               contentContainerStyle={styles.lista}
+              showsVerticalScrollIndicator={false}
               ListEmptyComponent={
-                <Text style={styles.textoVacio}>
-                  {busqueda
-                    ? 'No se encontraron clientes.'
-                    : 'No hay clientes registrados en la libreta.'}
-                </Text>
+                <View style={styles.centerEmpty}>
+                  <Ionicons name="book-outline" size={48} color="#CBD5E1" style={{ marginBottom: 8 }} />
+                  <Text style={styles.textoVacio}>
+                    {busqueda
+                      ? 'No se encontraron clientes.'
+                      : 'No hay clientes registrados en la libreta.'}
+                  </Text>
+                </View>
               }
             />
           )}
@@ -286,10 +305,9 @@ export default function S08_FiadosScreen(): React.ReactNode {
                 <TextInput
                   style={styles.inputModal}
                   placeholder="Ej: Juan Pérez"
-                  placeholderTextColor="#A0AEC0"
+                  placeholderTextColor="#94A3B8"
                   value={nombre}
                   onChangeText={setNombre}
-                  /* [NUEVO] Setup de teclado con boton aceptar para Nombre */
                   returnKeyType="done"
                   blurOnSubmit={true}
                   onSubmitEditing={Keyboard.dismiss}
@@ -299,11 +317,10 @@ export default function S08_FiadosScreen(): React.ReactNode {
                 <TextInput
                   style={styles.inputModal}
                   placeholder="Ej: 11 1234-5678"
-                  placeholderTextColor="#A0AEC0"
+                  placeholderTextColor="#94A3B8"
                   keyboardType="phone-pad"
                   value={telefono}
                   onChangeText={setTelefono}
-                  /*Setup de teclado con boton aceptar para Teléfono */
                   returnKeyType="done"
                   blurOnSubmit={true}
                   onSubmitEditing={Keyboard.dismiss}
@@ -313,8 +330,7 @@ export default function S08_FiadosScreen(): React.ReactNode {
                 <TextInput
                   style={[styles.inputModal, styles.textArea]}
                   placeholder="Ej: Vive a la vuelta del almacén"
-                  placeholderTextColor="#A0AEC0"
-                  /* Desactiva multiline en iOS para asegurar el boton Done de cierre directo */
+                  placeholderTextColor="#94A3B8"
                   multiline={Platform.OS !== 'ios'}
                   numberOfLines={3}
                   value={notas}
@@ -329,6 +345,7 @@ export default function S08_FiadosScreen(): React.ReactNode {
                     style={styles.botonCancelar}
                     onPress={resetFormCliente}
                     disabled={guardandoCliente}
+                    activeOpacity={0.8}
                   >
                     <Text style={styles.textoBotonCancelar}>Cancelar</Text>
                   </TouchableOpacity>
@@ -337,6 +354,7 @@ export default function S08_FiadosScreen(): React.ReactNode {
                     style={styles.botonGuardar}
                     onPress={handleGuardarCliente}
                     disabled={guardandoCliente}
+                    activeOpacity={0.8}
                   >
                     {guardandoCliente ? (
                       <ActivityIndicator color="#FFFFFF" size="small" />
@@ -374,11 +392,10 @@ export default function S08_FiadosScreen(): React.ReactNode {
               <TextInput
                 style={styles.inputModal}
                 placeholder="0.00"
-                placeholderTextColor="#A0AEC0"
+                placeholderTextColor="#94A3B8"
                 keyboardType="decimal-pad"
                 value={monto}
                 onChangeText={setMonto}
-                /*Setup de teclado con boton aceptar para monto */
                 returnKeyType="done"
                 blurOnSubmit={true}
                 onSubmitEditing={Keyboard.dismiss}
@@ -392,10 +409,9 @@ export default function S08_FiadosScreen(): React.ReactNode {
                     ? 'Ej: Compra de mercadería'
                     : 'Ej: Pago a cuenta'
                 }
-                placeholderTextColor="#A0AEC0"
+                placeholderTextColor="#94A3B8"
                 value={concepto}
                 onChangeText={setConcepto}
-                /*Setup de teclado con boton aceptar para descripcion */
                 returnKeyType="done"
                 blurOnSubmit={true}
                 onSubmitEditing={Keyboard.dismiss}
@@ -406,6 +422,7 @@ export default function S08_FiadosScreen(): React.ReactNode {
                   style={styles.botonCancelar}
                   onPress={() => setModalSaldoVisible(false)}
                   disabled={procesandoSaldo}
+                  activeOpacity={0.8}
                 >
                   <Text style={styles.textoBotonCancelar}>Cancelar</Text>
                 </TouchableOpacity>
@@ -413,10 +430,11 @@ export default function S08_FiadosScreen(): React.ReactNode {
                 <TouchableOpacity
                   style={[
                     styles.botonGuardar,
-                    tipoMovimiento === 'FIADO' ? styles.btnSumar : styles.btnRestar,
+                    tipoMovimiento === 'FIADO' ? styles.btnSumarModal : styles.btnRestarModal,
                   ]}
                   onPress={handleProcesarSaldo}
                   disabled={procesandoSaldo}
+                  activeOpacity={0.8}
                 >
                   {procesandoSaldo ? (
                     <ActivityIndicator color="#FFFFFF" size="small" />
@@ -436,73 +454,170 @@ export default function S08_FiadosScreen(): React.ReactNode {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F4F7' },
-  header: { padding: 16, flexDirection: 'row', gap: 10, alignItems: 'center' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F0F9FF', // Fondo celeste sutil característico
+  },
+  header: { 
+    padding: 16, 
+    flexDirection: 'row', 
+    gap: 10, 
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0F2FE',
+  },
+  inputBuscadorWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
   inputBuscador: {
     flex: 1,
     height: 44,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
     fontSize: 14,
-    color: '#1F2937',
+    color: '#0F172A',
   },
   botonNuevo: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#0284C7', // Azul corporativo del logo
     height: 44,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  textoBotonNuevo: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
-  lista: { paddingHorizontal: 16, paddingBottom: 20 },
+  textoBotonNuevo: { 
+    color: '#FFFFFF', 
+    fontWeight: '600', 
+    fontSize: 14, 
+  },
+  lista: { 
+    padding: 16, 
+    paddingBottom: 20, 
+  },
   cardCliente: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#E0F2FE',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  infoCliente: { flex: 1, paddingRight: 10 },
+  infoCliente: { 
+    flex: 1, 
+    paddingRight: 10, 
+  },
   headerInfoCliente: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  nombreCliente: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
-  btnEliminar: { padding: 2 },
-  textoBtnEliminar: { fontSize: 14 },
-  telefonoCliente: { fontSize: 12, color: '#666', marginTop: 4 },
-  notasCliente: { fontSize: 12, color: '#888', marginTop: 2, fontStyle: 'italic' },
-  derechaContainer: { alignItems: 'flex-end' },
-  labelDeuda: { fontSize: 10, color: '#666', textTransform: 'uppercase' },
-  montoDeuda: { fontSize: 16, fontWeight: 'bold', marginBottom: 8 },
-  conDeuda: { color: '#EF4444' },
-  sinDeuda: { color: '#10B981' },
-  botonesAccion: { flexDirection: 'row', gap: 6 },
+  nombreCliente: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    color: '#0F172A', 
+  },
+  btnEliminar: { 
+    padding: 4, 
+  },
+  telefonoCliente: { 
+    fontSize: 12, 
+    color: '#64748B', 
+    marginTop: 4, 
+  },
+  notasCliente: { 
+    fontSize: 12, 
+    color: '#64748B', 
+    marginTop: 2, 
+    fontStyle: 'italic', 
+  },
+  derechaContainer: { 
+    alignItems: 'flex-end', 
+  },
+  labelDeuda: { 
+    fontSize: 10, 
+    color: '#64748B', 
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
+  montoDeuda: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    marginBottom: 8, 
+  },
+  conDeuda: { 
+    color: '#EF4444', 
+  },
+  sinDeuda: { 
+    color: '#16A34A', 
+  },
+  botonesAccion: { 
+    flexDirection: 'row', 
+    gap: 6, 
+  },
   btnMini: {
     paddingVertical: 6,
     paddingHorizontal: 10,
-    borderRadius: 6,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnSumar: { backgroundColor: '#EF4444' },
-  btnRestar: { backgroundColor: '#10B981' },
-  textoBtnMini: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 11 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  textoVacio: { textAlign: 'center', color: '#888', marginTop: 40, fontSize: 14 },
+  btnSumar: { 
+    backgroundColor: '#EF4444', 
+  },
+  btnRestar: { 
+    backgroundColor: '#16A34A', 
+  },
+  textoBtnMini: { 
+    color: '#FFFFFF', 
+    fontWeight: 'bold', 
+    fontSize: 11, 
+  },
+  center: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    padding: 20,
+  },
+  centerEmpty: {
+    marginTop: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textoCargando: {
+    marginTop: 10,
+    color: '#64748B',
+    fontSize: 14,
+  },
+  textoVacio: { 
+    textAlign: 'center', 
+    color: '#64748B', 
+    fontSize: 15, 
+  },
 
   // Estilos del Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -510,28 +625,30 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
+    borderWidth: 1,
+    borderColor: '#E0F2FE',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#0F172A',
     marginBottom: 16,
   },
   labelInput: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#334155',
     marginBottom: 6,
   },
   inputModal: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
     paddingHorizontal: 12,
     height: 44,
     fontSize: 15,
-    color: '#1F2937',
+    color: '#0F172A',
     marginBottom: 16,
   },
   textArea: {
@@ -548,16 +665,30 @@ const styles = StyleSheet.create({
   botonCancelar: {
     paddingVertical: 12,
     paddingHorizontal: 18,
-    borderRadius: 8,
-    backgroundColor: '#E5E7EB',
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
   },
-  textoBotonCancelar: { color: '#374151', fontWeight: '600', fontSize: 14 },
+  textoBotonCancelar: { 
+    color: '#334155', 
+    fontWeight: '600', 
+    fontSize: 14, 
+  },
   botonGuardar: {
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    backgroundColor: '#0284C7',
     alignItems: 'center',
   },
-  textoBotonGuardar: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
+  btnSumarModal: {
+    backgroundColor: '#EF4444',
+  },
+  btnRestarModal: {
+    backgroundColor: '#16A34A',
+  },
+  textoBotonGuardar: { 
+    color: '#FFFFFF', 
+    fontWeight: '600', 
+    fontSize: 14, 
+  },
 });

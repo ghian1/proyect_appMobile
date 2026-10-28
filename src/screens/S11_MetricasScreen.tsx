@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -106,12 +107,10 @@ export function S11_MetricasScreen(): React.ReactNode {
 
   // Filtrado de las ventas del turno de caja actual (inicia en $0 al abrir nueva caja)
   const ventasTurnoActual = useMemo(() => {
-    // Si la caja está cerrada, no hay recaudación activa en curso ($0)
     if (estadoCaja.estado === 'cerrada') {
       return [];
     }
 
-    // Convertimos la fecha de apertura si existe
     const dApertura = estadoCaja.fechaApertura?.toDate
       ? estadoCaja.fechaApertura.toDate().getTime()
       : estadoCaja.fechaApertura?.seconds
@@ -126,12 +125,10 @@ export function S11_MetricasScreen(): React.ReactNode {
         ? v.fecha.seconds * 1000
         : new Date(v.fecha).getTime();
 
-      // Si existe fecha de apertura del turno actual, se toman solo las ventas ocurridas a partir de dicha apertura
       if (dApertura) {
         return dVenta >= dApertura;
       }
 
-      // Fallback: si no hay fecha de apertura registrada aún, tomamos las del día de hoy
       const hoy = new Date();
       const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime();
       return dVenta >= inicioHoy;
@@ -202,13 +199,11 @@ export function S11_MetricasScreen(): React.ReactNode {
     };
   }, [ventasTurnoActual]);
 
-  // Porcentajes de cada medio de pago respecto del total recaudado en caja
   const calcularPorcentaje = (monto: number): number => {
     if (totalFacturadoHoy === 0) return 0;
     return Math.round((monto / totalFacturadoHoy) * 100);
   };
 
-  // Manejo de la acción de Cerrar o Abrir Caja
   const handleAccionCaja = () => {
     if (estadoCaja.estado === 'abierta') {
       Alert.alert(
@@ -276,14 +271,13 @@ export function S11_MetricasScreen(): React.ReactNode {
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
-      {/* Header estilo iOS */}
+      {/* Header moderno */}
       <View style={styles.header}>
         <View style={styles.headerTextoContainer}>
-          <Text style={styles.tituloHeader}>Métricas y Control de Caja</Text>
+          <Text style={styles.tituloHeader}>Métricas y Caja</Text>
           <Text style={styles.fechaHeader}>{formatearFechaHoy()}</Text>
         </View>
 
-        {/* Badge indicador de estado de caja */}
         <View
           style={[
             styles.badgeEstado,
@@ -302,14 +296,14 @@ export function S11_MetricasScreen(): React.ReactNode {
               cajaAbierta ? styles.textoVerde : styles.textoRojo,
             ]}
           >
-            {cajaAbierta ? 'Caja Abierta' : 'Caja Cerrada'}
+            {cajaAbierta ? 'Abierta' : 'Cerrada'}
           </Text>
         </View>
       </View>
 
       {estaCargando ? (
         <View style={styles.centrado}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#0284C7" />
           <Text style={styles.textoCargando}>Sincronizando métricas en tiempo real...</Text>
         </View>
       ) : (
@@ -324,7 +318,7 @@ export function S11_MetricasScreen(): React.ReactNode {
                 setRefrescando(true);
                 setTimeout(() => setRefrescando(false), 600);
               }}
-              tintColor="#007AFF"
+              tintColor="#0284C7"
             />
           }
         >
@@ -332,8 +326,8 @@ export function S11_MetricasScreen(): React.ReactNode {
           <View style={styles.card}>
             <View style={styles.cardHeaderFila}>
               <Text style={styles.cardEtiqueta}>TOTAL FACTURADO EN CAJA</Text>
-              <View style={[styles.iconoCirculo, { backgroundColor: '#DCFCE7' }]}>
-                <Text style={styles.iconoEmoji}>💰</Text>
+              <View style={[styles.iconoCirculo, { backgroundColor: '#E0F2FE' }]}>
+                <Ionicons name="wallet-outline" size={18} color="#0284C7" />
               </View>
             </View>
             <Text style={styles.montoPrincipal}>{formatearMoneda(totalFacturadoHoy)}</Text>
@@ -344,14 +338,14 @@ export function S11_MetricasScreen(): React.ReactNode {
             </Text>
           </View>
 
-          {/* Grilla con Card 2 (Cantidad de Ventas) y Card 3 (Fiados) */}
+          {/* Grilla con Card 2 y Card 3 */}
           <View style={styles.filaDosColumnas}>
             {/* Card 2: Cantidad de Ventas */}
             <View style={[styles.card, styles.columna]}>
               <View style={styles.cardHeaderFila}>
                 <Text style={styles.cardEtiquetaMini}>VENTAS DEL TURNO</Text>
                 <View style={[styles.iconoCirculoMini, { backgroundColor: '#E0F2FE' }]}>
-                  <Text style={styles.iconoEmojiMini}>🛒</Text>
+                  <Ionicons name="cart-outline" size={14} color="#0284C7" />
                 </View>
               </View>
               <Text style={styles.montoMedio}>
@@ -364,15 +358,15 @@ export function S11_MetricasScreen(): React.ReactNode {
               </Text>
             </View>
 
-            {/* Card 3: Total en Fiados / Cuentas Corrientes */}
+            {/* Card 3: Total en Fiados */}
             <View style={[styles.card, styles.columna]}>
               <View style={styles.cardHeaderFila}>
                 <Text style={styles.cardEtiquetaMini}>EN FIADOS</Text>
                 <View style={[styles.iconoCirculoMini, { backgroundColor: '#FEF3C7' }]}>
-                  <Text style={styles.iconoEmojiMini}>📓</Text>
+                  <Ionicons name="book-outline" size={14} color="#D97706" />
                 </View>
               </View>
-              <Text style={[styles.montoMedio, { color: '#B45309' }]}>
+              <Text style={[styles.montoMedio, { color: '#D97706' }]}>
                 {formatearMoneda(totalEnFiados)}
               </Text>
               <View style={styles.divisorSutil} />
@@ -389,8 +383,8 @@ export function S11_MetricasScreen(): React.ReactNode {
                 <Text style={styles.cardTituloSeccion}>Desglose por Método de Pago</Text>
                 <Text style={styles.cardSubtextoSeccion}>Ventas cobradas en este turno de caja</Text>
               </View>
-              <View style={[styles.iconoCirculo, { backgroundColor: '#F3E8FF' }]}>
-                <Text style={styles.iconoEmoji}>📊</Text>
+              <View style={[styles.iconoCirculo, { backgroundColor: '#F0FDF4' }]}>
+                <Ionicons name="bar-chart-outline" size={18} color="#16A34A" />
               </View>
             </View>
 
@@ -399,7 +393,7 @@ export function S11_MetricasScreen(): React.ReactNode {
               <View style={styles.itemDesglose}>
                 <View style={styles.filaDesgloseEncabezado}>
                   <View style={styles.filaMetodoNombre}>
-                    <Text style={styles.emojiMetodo}>💵</Text>
+                    <Ionicons name="cash-outline" size={16} color="#16A34A" style={{ marginRight: 8 }} />
                     <Text style={styles.nombreMetodo}>Efectivo</Text>
                   </View>
                   <View style={styles.filaMetodoMontos}>
@@ -416,7 +410,7 @@ export function S11_MetricasScreen(): React.ReactNode {
                     style={[
                       styles.barraRelleno,
                       {
-                        backgroundColor: '#10B981',
+                        backgroundColor: '#16A34A',
                         width: `${calcularPorcentaje(desgloseMetodos.efectivo.monto)}%`,
                       },
                     ]}
@@ -432,7 +426,7 @@ export function S11_MetricasScreen(): React.ReactNode {
               <View style={styles.itemDesglose}>
                 <View style={styles.filaDesgloseEncabezado}>
                   <View style={styles.filaMetodoNombre}>
-                    <Text style={styles.emojiMetodo}>📱</Text>
+                    <Ionicons name="qr-code-outline" size={16} color="#0284C7" style={{ marginRight: 8 }} />
                     <Text style={styles.nombreMetodo}>QR (Mercado Pago)</Text>
                   </View>
                   <View style={styles.filaMetodoMontos}>
@@ -449,7 +443,7 @@ export function S11_MetricasScreen(): React.ReactNode {
                     style={[
                       styles.barraRelleno,
                       {
-                        backgroundColor: '#009EE3',
+                        backgroundColor: '#0284C7',
                         width: `${calcularPorcentaje(desgloseMetodos.qr.monto)}%`,
                       },
                     ]}
@@ -465,7 +459,7 @@ export function S11_MetricasScreen(): React.ReactNode {
               <View style={styles.itemDesglose}>
                 <View style={styles.filaDesgloseEncabezado}>
                   <View style={styles.filaMetodoNombre}>
-                    <Text style={styles.emojiMetodo}>🏦</Text>
+                    <Ionicons name="swap-horizontal-outline" size={16} color="#6366F1" style={{ marginRight: 8 }} />
                     <Text style={styles.nombreMetodo}>Transferencia</Text>
                   </View>
                   <View style={styles.filaMetodoMontos}>
@@ -494,12 +488,12 @@ export function S11_MetricasScreen(): React.ReactNode {
                 </Text>
               </View>
 
-              {/* Fiado (si hubieron ventas a cuenta en este turno) */}
+              {/* Fiado */}
               {desgloseMetodos.fiado.monto > 0 && (
                 <View style={[styles.itemDesglose, { borderBottomWidth: 0 }]}>
                   <View style={styles.filaDesgloseEncabezado}>
                     <View style={styles.filaMetodoNombre}>
-                      <Text style={styles.emojiMetodo}>📓</Text>
+                      <Ionicons name="book-outline" size={16} color="#D97706" style={{ marginRight: 8 }} />
                       <Text style={styles.nombreMetodo}>Anotado en Fiado</Text>
                     </View>
                     <View style={styles.filaMetodoMontos}>
@@ -516,7 +510,7 @@ export function S11_MetricasScreen(): React.ReactNode {
                       style={[
                         styles.barraRelleno,
                         {
-                          backgroundColor: '#F59E0B',
+                          backgroundColor: '#D97706',
                           width: `${calcularPorcentaje(desgloseMetodos.fiado.monto)}%`,
                         },
                       ]}
@@ -531,7 +525,7 @@ export function S11_MetricasScreen(): React.ReactNode {
             </View>
           </View>
 
-          {/* Card 5: Control y Estado de Caja con Botón de Acción Principal */}
+          {/* Card 5: Control y Estado de Caja */}
           <View style={[styles.card, styles.cardCaja]}>
             <View style={styles.infoCajaContainer}>
               <View style={styles.cajaEstadoRow}>
@@ -543,7 +537,11 @@ export function S11_MetricasScreen(): React.ReactNode {
                       : { backgroundColor: '#FEE2E2' },
                   ]}
                 >
-                  <Text style={styles.iconoEmoji}>{cajaAbierta ? '🔓' : '🔒'}</Text>
+                  <Ionicons
+                    name={cajaAbierta ? 'lock-open-outline' : 'lock-closed-outline'}
+                    size={22}
+                    color={cajaAbierta ? '#16A34A' : '#DC2626'}
+                  />
                 </View>
                 <View style={styles.textoCajaContainer}>
                   <Text style={styles.tituloControlCaja}>Control de Caja</Text>
@@ -563,7 +561,6 @@ export function S11_MetricasScreen(): React.ReactNode {
                 </View>
               </View>
 
-              {/* Botón principal de acción: Cerrar Caja del Día / Abrir Caja */}
               <TouchableOpacity
                 style={[
                   styles.botonAccionCaja,
@@ -579,14 +576,21 @@ export function S11_MetricasScreen(): React.ReactNode {
                     color={cajaAbierta ? '#DC2626' : '#FFFFFF'}
                   />
                 ) : (
-                  <Text
-                    style={[
-                      styles.textoBotonAccionCaja,
-                      cajaAbierta ? styles.textoBtnCerrar : styles.textoBtnAbrir,
-                    ]}
-                  >
-                    {cajaAbierta ? 'Cerrar Caja del Día 🔒' : 'Abrir Caja 🔓'}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons
+                      name={cajaAbierta ? 'shield-outline' : 'key-outline'}
+                      size={16}
+                      color={cajaAbierta ? '#DC2626' : '#FFFFFF'}
+                    />
+                    <Text
+                      style={[
+                        styles.textoBotonAccionCaja,
+                        cajaAbierta ? styles.textoBtnCerrar : styles.textoBtnAbrir,
+                      ]}
+                    >
+                      {cajaAbierta ? 'Cerrar Caja del Día' : 'Abrir Caja'}
+                    </Text>
+                  </View>
                 )}
               </TouchableOpacity>
             </View>
@@ -600,18 +604,17 @@ export function S11_MetricasScreen(): React.ReactNode {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#F2F4F7',
+    backgroundColor: '#F0F9FF',
   },
   header: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 14,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#E0F2FE',
   },
   headerTextoContainer: {
     flex: 1,
@@ -619,12 +622,12 @@ const styles = StyleSheet.create({
   tituloHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: '#0F172A',
     letterSpacing: -0.3,
   },
   fechaHeader: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#64748B',
     marginTop: 2,
     fontWeight: '500',
   },
@@ -637,8 +640,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeAbierta: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
   },
   badgeCerrada: {
     backgroundColor: '#FEF2F2',
@@ -651,20 +654,20 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   puntoVerde: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#16A34A',
   },
   puntoRojo: {
-    backgroundColor: '#EF4444',
+    backgroundColor: '#DC2626',
   },
   textoBadgeEstado: {
     fontSize: 12,
     fontWeight: '600',
   },
   textoVerde: {
-    color: '#065F46',
+    color: '#16A34A',
   },
   textoRojo: {
-    color: '#991B1B',
+    color: '#DC2626',
   },
   scrollView: {
     flex: 1,
@@ -681,18 +684,20 @@ const styles = StyleSheet.create({
   },
   textoCargando: {
     marginTop: 12,
-    color: '#6B7280',
+    color: '#64748B',
     fontSize: 14,
     fontWeight: '500',
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 14,
-    shadowColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#E0F2FE',
+    shadowColor: '#0284C7',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 2,
   },
@@ -705,13 +710,13 @@ const styles = StyleSheet.create({
   cardEtiqueta: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8E8E93',
+    color: '#0284C7',
     letterSpacing: 0.8,
   },
   cardEtiquetaMini: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#8E8E93',
+    color: '#0284C7',
     letterSpacing: 0.5,
   },
   iconoCirculo: {
@@ -728,22 +733,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconoEmoji: {
-    fontSize: 18,
-  },
-  iconoEmojiMini: {
-    fontSize: 14,
-  },
   montoPrincipal: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#1C1C1E',
+    color: '#0F172A',
     letterSpacing: -0.5,
     marginVertical: 4,
   },
   cardSubtexto: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#64748B',
     marginTop: 2,
     lineHeight: 18,
   },
@@ -758,36 +757,36 @@ const styles = StyleSheet.create({
   montoMedio: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: '#0F172A',
     marginTop: 2,
   },
   unidadMedio: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#64748B',
   },
   divisorSutil: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F1F5F9',
     marginVertical: 10,
   },
   datoComplementario: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#64748B',
     fontWeight: '500',
   },
   datoResaltado: {
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: '#0F172A',
   },
   cardTituloSeccion: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: '#0F172A',
   },
   cardSubtextoSeccion: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: '#64748B',
     marginTop: 2,
   },
   contenedorDesglose: {
@@ -796,7 +795,7 @@ const styles = StyleSheet.create({
   itemDesglose: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#F1F5F9',
   },
   filaDesgloseEncabezado: {
     flexDirection: 'row',
@@ -808,14 +807,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  emojiMetodo: {
-    fontSize: 16,
-    marginRight: 8,
-  },
   nombreMetodo: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#0F172A',
   },
   filaMetodoMontos: {
     flexDirection: 'row',
@@ -825,18 +820,18 @@ const styles = StyleSheet.create({
   montoMetodo: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: '#0F172A',
   },
   porcentajeMetodo: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#64748B',
     minWidth: 32,
     textAlign: 'right',
   },
   barraFondo: {
     height: 6,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#F1F5F9',
     borderRadius: 3,
     overflow: 'hidden',
     marginVertical: 4,
@@ -847,12 +842,12 @@ const styles = StyleSheet.create({
   },
   cantVentasMetodo: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#94A3B8',
     marginTop: 2,
   },
   cardCaja: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E0F2FE',
     backgroundColor: '#FFFFFF',
     marginTop: 4,
   },
@@ -877,11 +872,11 @@ const styles = StyleSheet.create({
   tituloControlCaja: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: '#0F172A',
   },
   subtituloControlCaja: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#64748B',
     marginTop: 2,
   },
   botonAccionCaja: {
@@ -891,12 +886,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   botonCerrarCaja: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FCA5A5',
   },
   botonAbrirCaja: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#0284C7',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
   textoBotonAccionCaja: {
     fontSize: 15,

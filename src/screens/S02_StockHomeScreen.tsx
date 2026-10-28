@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
@@ -17,11 +18,10 @@ import { RootStackParamList } from '../types/navigation';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function S02_StockHomeScreen(): React.ReactNode {
-  // Funcionalidad para desloguear
   const { user, logout } = useAuth();
   const navigation = useNavigation<NavigationProp>();
 
-  const nombreUsuario = user?.displayName || user?.email?.split('@')[0] || 'Usuario';
+  const nombreUsuario = user?.displayName || user?.email?.split('@')[0] || 'Administrador';
 
   const handleCerrarSesion = () => {
     Alert.alert(
@@ -45,79 +45,116 @@ export function S02_StockHomeScreen(): React.ReactNode {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Encabezado con Botón de Cerrar Sesión */}
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* ENCABEZADO CON LA PALETA DEL LOGO */}
         <View style={styles.header}>
-          <View style={styles.headerInfo}>
-            <Text style={styles.saludo}>Bienvenido/a 👋</Text>
-            <Text style={styles.usuario}>{nombreUsuario}</Text>
-            <Text style={styles.subtitulo}>Almacén Mingo - Panel de Control</Text>
+          <View style={styles.headerTopRow}>
+            <View style={styles.userInfoContainer}>
+              <View style={styles.avatarContainer}>
+                <Text style={styles.avatarText}>
+                  {nombreUsuario.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View>
+                <Text style={styles.empresaNombre}>Almacén Mingo</Text>
+                <Text style={styles.usuarioNombre} numberOfLines={1}>{nombreUsuario}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.btnLogout} 
+              onPress={handleCerrarSesion}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.btnLogout} onPress={handleCerrarSesion}>
-            <Text style={styles.textoBtnLogout}>Salir 🚪</Text>
-          </TouchableOpacity>
+          <View style={styles.badgePanel}>
+            <Ionicons name="shield-checkmark-outline" size={14} color="#0284C7" />
+            <Text style={styles.badgeText}>Panel de Control Activo</Text>
+          </View>
         </View>
 
-        {/* Grilla de Módulos */}
+        {/* SECCIÓN DE MÓDULOS */}
+        <Text style={styles.seccionTitulo}>Módulos del Sistema</Text>
+
         <View style={styles.grid}>
           {/* Módulo 1: Gestión de Stock */}
           <TouchableOpacity
             style={styles.cardMenu}
             onPress={() => navigation.navigate('StockFlow')}
+            activeOpacity={0.8}
           >
             <View style={[styles.iconoContainer, { backgroundColor: '#E0F2FE' }]}>
-              <Text style={styles.emoji}>📦</Text>
+              <Ionicons name="cube-outline" size={24} color="#0284C7" />
             </View>
-            <Text style={styles.tituloCard}>Gestión de Stock</Text>
-            <Text style={styles.descCard}>
-              Inventario completo, altas, bajas y modificación de precios.
-            </Text>
+            <View style={styles.cardTextContainer}>
+              <Text style={styles.tituloCard}>Gestión de Stock</Text>
+              <Text style={styles.descCard}>
+                Inventario completo, altas, bajas y modificación de precios.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" style={styles.chevron} />
           </TouchableOpacity>
 
           {/* Módulo 2: Registro de Ventas */}
           <TouchableOpacity
             style={styles.cardMenu}
             onPress={() => navigation.navigate('VentasFlow')}
+            activeOpacity={0.8}
           >
-            <View style={[styles.iconoContainer, { backgroundColor: '#DCFCE7' }]}>
-              <Text style={styles.emoji}>🛒</Text>
+            <View style={[styles.iconoContainer, { backgroundColor: '#E0F4F8' }]}>
+              <Ionicons name="cart-outline" size={24} color="#0EA5E9" />
             </View>
-            <Text style={styles.tituloCard}>Ventas / Caja</Text>
-            <Text style={styles.descCard}>
-              Cobro rápido en mostrador y emisión de tickets diarios.
-            </Text>
+            <View style={styles.cardTextContainer}>
+              <Text style={styles.tituloCard}>Ventas / Caja</Text>
+              <Text style={styles.descCard}>
+                Cobro rápido en mostrador y emisión de tickets diarios.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" style={styles.chevron} />
           </TouchableOpacity>
 
           {/* Módulo 3: Libreta de Fiados */}
           <TouchableOpacity
             style={styles.cardMenu}
             onPress={() => navigation.navigate('FiadosFlow')}
+            activeOpacity={0.8}
           >
-            <View style={[styles.iconoContainer, { backgroundColor: '#FEF3C7' }]}>
-              <Text style={styles.emoji}>📓</Text>
+            <View style={[styles.iconoContainer, { backgroundColor: '#E2E8F0' }]}>
+              <Ionicons name="book-outline" size={24} color="#475569" />
             </View>
-            <Text style={styles.tituloCard}>Libreta de Fiados</Text>
-            <Text style={styles.descCard}>
-              Cuentas corrientes de clientes, deudas y cobros parciales.
-            </Text>
+            <View style={styles.cardTextContainer}>
+              <Text style={styles.tituloCard}>Libreta de Fiados</Text>
+              <Text style={styles.descCard}>
+                Cuentas corrientes de clientes, deudas y cobros parciales.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" style={styles.chevron} />
           </TouchableOpacity>
 
           {/* Módulo 4: Compras a Proveedores */}
           <TouchableOpacity
             style={styles.cardMenu}
             onPress={() => navigation.navigate('ComprasFlow')}
+            activeOpacity={0.8}
           >
-            <View style={[styles.iconoContainer, { backgroundColor: '#F3E8FF' }]}>
-              <Text style={styles.emoji}>🚚</Text>
+            <View style={[styles.iconoContainer, { backgroundColor: '#BAE6FD' }]}>
+              <Ionicons name="business-outline" size={24} color="#0369A1" />
             </View>
-            <Text style={styles.tituloCard}>Compras / Proveedores</Text>
-            <Text style={styles.descCard}>
-              Ingreso de facturas y pedidos de reposición al por mayor.
-            </Text>
+            <View style={styles.cardTextContainer}>
+              <Text style={styles.tituloCard}>Compras / Proveedores</Text>
+              <Text style={styles.descCard}>
+                Ingreso de facturas y pedidos de reposición al por mayor.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" style={styles.chevron} />
           </TouchableOpacity>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -126,61 +163,111 @@ export function S02_StockHomeScreen(): React.ReactNode {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F4F7',
+    backgroundColor: '#F0F9FF', // Fondo general con un leve tinte celeste inspirado en el logo
   },
   scrollContent: {
     padding: 20,
+    paddingBottom: 40,
   },
   header: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
     marginBottom: 24,
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E0F2FE',
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
-  headerInfo: {
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
-    paddingRight: 10,
+    marginRight: 10,
   },
-  saludo: {
-    fontSize: 16,
-    color: '#666666',
+  avatarContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#0284C7', // Azul principal del logo
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  usuario: {
-    fontSize: 26,
+  avatarText: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: '#FFFFFF',
   },
-  subtitulo: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-    marginTop: 2,
+  empresaNombre: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0284C7',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  usuarioNombre: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0F172A',
   },
   btnLogout: {
-    backgroundColor: '#FEE2E2',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    backgroundColor: '#FEF2F2',
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#FCA5A5',
-    marginTop: 4,
+    borderColor: '#FEE2E2',
   },
-  textoBtnLogout: {
-    color: '#EF4444',
+  badgePanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0F2FE',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    marginTop: 16,
+    gap: 6,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0369A1',
+  },
+  seccionTitulo: {
+    fontSize: 16,
     fontWeight: 'bold',
-    fontSize: 13,
+    color: '#0369A1',
+    marginBottom: 14,
+    marginLeft: 4,
   },
   grid: {
-    gap: 16,
+    gap: 12,
   },
   cardMenu: {
     backgroundColor: '#FFFFFF',
-    padding: 20,
+    padding: 16,
     borderRadius: 14,
-    elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   iconoContainer: {
     width: 48,
@@ -188,19 +275,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginRight: 14,
   },
-  emoji: {
-    fontSize: 22,
+  cardTextContainer: {
+    flex: 1,
+    marginRight: 8,
   },
   tituloCard: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 2,
   },
   descCard: {
-    fontSize: 13,
-    color: '#666666',
-    marginTop: 4,
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 16,
+  },
+  chevron: {
+    opacity: 0.6,
   },
 });

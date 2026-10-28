@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,12 +25,13 @@ import {
   actualizarProducto,
   crearCategoriaBD,
   crearProducto,
+  eliminarCategoriaBD,
   obtenerProductoPorId,
   suscribirACategorias
 } from '../services/productService';
 import { StockStackParamList } from '../types/navigation';
 import { sanearEntero, sanearImporte } from '../utils/sanitizers';
-a
+
 type ScreenRouteProp = RouteProp<StockStackParamList, 'ProductEdit'>;
 type ScreenNavProp = NativeStackNavigationProp<StockStackParamList, 'ProductEdit'>;
 
@@ -129,6 +131,34 @@ export function S05_AltaEditarScreen() {
     }
   };
 
+  const handleLongPressCategoria = (cat: string) => {
+    if (cat === 'Almacén') {
+      Alert.alert('Aviso', `La categoría "${cat}" no se puede eliminar por seguridad.`);
+      return;
+    }
+
+    Alert.alert(
+      'Eliminar Categoría',
+      `¿Estás seguro de que querés borrar la categoría "${cat}"? Se quitará de todos los productos que la tengan asignada.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await eliminarCategoriaBD(cat);
+              setCategorias((prev) => prev.filter((c) => c !== cat));
+              Alert.alert('Éxito', `La categoría "${cat}" fue eliminada correctamente.`);
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo eliminar la categoría.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleConfirmarNuevaCategoria = async () => {
     if (!nuevaCatTexto.trim()) {
       Alert.alert('Atención', 'Ingresá un nombre para la categoría.');
@@ -178,7 +208,6 @@ export function S05_AltaEditarScreen() {
     }
   };
 
-  // NUEVO: Función para seleccionar archivo (PNG/JPG) desde la galería
   const seleccionarDeGaleria = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -256,7 +285,7 @@ export function S05_AltaEditarScreen() {
   if (cargandoInicial) {
     return (
       <SafeAreaView style={[styles.contenedor, styles.centroCarga]}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#0284C7" />
         <Text style={styles.textoCarga}>Cargando datos del producto...</Text>
       </SafeAreaView>
     );
@@ -274,6 +303,7 @@ export function S05_AltaEditarScreen() {
             ref={scrollViewRef}
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
             <Text style={styles.titulo}>
               {esEdicion ? 'Editar Mercadería' : 'Nueva Mercadería'}
@@ -284,6 +314,7 @@ export function S05_AltaEditarScreen() {
                 <Image source={{ uri: imagenUri }} style={styles.fotoPreview} />
               ) : (
                 <View style={styles.fotoPlaceholder}>
+                  <Ionicons name="camera-outline" size={28} color="#94A3B8" />
                   <Text style={styles.placeholderTexto}>Sin Foto</Text>
                 </View>
               )}
@@ -294,16 +325,17 @@ export function S05_AltaEditarScreen() {
                   onPress={tomarFotoConCamara}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.textoBotonCamara}>📷 Tomar Foto</Text>
+                  <Ionicons name="camera" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.textoBotonCamara}>Tomar Foto</Text>
                 </TouchableOpacity>
 
-                {/* Botón añadido para galería */}
                 <TouchableOpacity
                   style={styles.botonGaleria}
                   onPress={seleccionarDeGaleria}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.textoBotonGaleria}>🖼️ Subir de Galería</Text>
+                  <Ionicons name="images" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.textoBotonGaleria}>Subir de Galería</Text>
                 </TouchableOpacity>
 
                 {imagenUri && (
@@ -322,7 +354,7 @@ export function S05_AltaEditarScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Ej: Fideos Marolio 500g"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor="#94A3B8"
                 value={nombre}
                 onChangeText={setNombre}
                 keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
@@ -341,6 +373,8 @@ export function S05_AltaEditarScreen() {
                       key={cat}
                       style={[styles.chip, seleccionada ? styles.chipSeleccionado : null]}      
                       onPress={() => toggleCategoria(cat)}
+                      onLongPress={() => handleLongPressCategoria(cat)}
+                      delayLongPress={500}
                       activeOpacity={0.7}
                     >
                       <Text
@@ -360,7 +394,8 @@ export function S05_AltaEditarScreen() {
                   onPress={() => setModalCatVisible(true)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.textoAgregarCategoria}>+ Nueva Categoría</Text>
+                  <Ionicons name="add" size={14} color="#0284C7" style={{ marginRight: 2 }} />
+                  <Text style={styles.textoAgregarCategoria}>Nueva Categoría</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -371,7 +406,7 @@ export function S05_AltaEditarScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="0.00"
-                  placeholderTextColor="#8E8E93"
+                  placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
                   value={precioTexto}
                   onChangeText={setPrecioTexto}
@@ -385,7 +420,7 @@ export function S05_AltaEditarScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="0"
-                  placeholderTextColor="#8E8E93"
+                  placeholderTextColor="#94A3B8"
                   keyboardType="number-pad"
                   value={stockTexto}
                   onChangeText={setStockTexto}
@@ -400,7 +435,7 @@ export function S05_AltaEditarScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Aclaraciones del proveedor, ubicación en depósito..."
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor="#94A3B8"
                 value={descripcion}
                 onChangeText={setDescripcion}
                 onFocus={() => {
@@ -420,6 +455,7 @@ export function S05_AltaEditarScreen() {
               style={[styles.botonGuardar, guardando && styles.botonDeshabilitado]}
               onPress={handleGuardar}
               disabled={guardando}
+              activeOpacity={0.8}
             >
               {guardando ? (
                 <ActivityIndicator color="#FFFFFF" />
@@ -442,7 +478,7 @@ export function S05_AltaEditarScreen() {
             <TextInput
               style={styles.inputModal}
               placeholder="Ej: Golosinas, Fiambres..."
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor="#94A3B8"
               value={nuevaCatTexto}
               onChangeText={setNuevaCatTexto}
               autoFocus
@@ -457,6 +493,7 @@ export function S05_AltaEditarScreen() {
                   setNuevaCatTexto('');
                   setModalCatVisible(false);
                 }}
+                activeOpacity={0.7}
               >
                 <Text style={styles.textoModalCancelar}>Cancelar</Text>
               </TouchableOpacity>
@@ -464,6 +501,7 @@ export function S05_AltaEditarScreen() {
               <TouchableOpacity
                 style={styles.botonModalAgregar}
                 onPress={handleConfirmarNuevaCategoria}
+                activeOpacity={0.7}
               >
                 <Text style={styles.textoModalAgregar}>Agregar</Text>
               </TouchableOpacity>
@@ -478,7 +516,7 @@ export function S05_AltaEditarScreen() {
 const styles = StyleSheet.create({
   contenedor: {
     flex: 1,
-    backgroundColor: '#F2F4F7',
+    backgroundColor: '#F0F9FF', // Fondo celeste sutil característico
   },
   centroCarga: {
     justifyContent: 'center',
@@ -487,7 +525,7 @@ const styles = StyleSheet.create({
   textoCarga: {
     marginTop: 12,
     fontSize: 15,
-    color: '#8E8E93',
+    color: '#64748B',
   },
   scroll: {
     padding: 20,
@@ -496,78 +534,88 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#1C1C1E',
+    color: '#0F172A',
     marginBottom: 20,
   },
   seccionFoto: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    padding: 12,
+    marginBottom: 20,
+    padding: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#D1D1D6',
+    borderColor: '#E0F2FE',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   fotoPreview: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#E5E5EA',
+    width: 84,
+    height: 84,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
   },
   fotoPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#E5E5EA',
+    width: 84,
+    height: 84,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#C7C7CC',
+    borderColor: '#CBD5E1',
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
   },
   placeholderTexto: {
-    color: '#8E8E93',
-    fontSize: 12,
-    fontWeight: '500',
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 4,
   },
   contenedorBotonesFoto: {
     marginLeft: 16,
     flex: 1,
   },
   botonCamara: {
-    backgroundColor: '#34C759',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    backgroundColor: '#0EA5E9',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
     borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   textoBotonCamara: {
     color: '#FFFFFF',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
   },
   botonGaleria: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    backgroundColor: '#0284C7',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
     borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 6,
   },
   textoBotonGaleria: {
     color: '#FFFFFF',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
   },
   botonEliminarFoto: {
     marginTop: 8,
     alignItems: 'center',
   },
   textoEliminarFoto: {
-    color: '#FF3B30',
-    fontSize: 13,
-    fontWeight: '500',
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '600',
   },
   campo: {
     marginBottom: 16,
@@ -575,18 +623,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#3A3A3C',
+    color: '#334155',
     marginBottom: 6,
   },
   input: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#D1D1D6',
-    borderRadius: 8,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#1C1C1E',
+    color: '#0F172A',
   },
   textArea: {
     minHeight: 70,
@@ -608,14 +656,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 14,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: '#E2E8F0',
   },
   chipSeleccionado: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#0284C7',
   },
   chipTexto: {
     fontSize: 13,
-    color: '#3A3A3C',
+    color: '#334155',
     fontWeight: '500',
   },
   chipTextoSeleccionado: {
@@ -626,25 +674,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 14,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E0F2FE',
     borderWidth: 1,
-    borderColor: '#34C759',
+    borderColor: '#0284C7',
     borderStyle: 'dashed',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   textoAgregarCategoria: {
     fontSize: 13,
-    color: '#2E7D32',
+    color: '#0284C7',
     fontWeight: '600',
   },
   botonGuardar: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#0284C7',
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
   botonDeshabilitado: {
-    backgroundColor: '#9EBAE4',
+    backgroundColor: '#94A3B8',
   },
   textoBotonGuardar: {
     color: '#FFFFFF',
@@ -653,7 +708,7 @@ const styles = StyleSheet.create({
   },
   modalFondo: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -661,29 +716,33 @@ const styles = StyleSheet.create({
   modalContenido: {
     width: '100%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 20,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E0F2FE',
   },
   modalTitulo: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1C1C1E',
+    color: '#0F172A',
     marginBottom: 4,
   },
   modalSubtitulo: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: '#64748B',
     marginBottom: 16,
   },
   inputModal: {
-    backgroundColor: '#F2F4F7',
-    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#1C1C1E',
+    color: '#0F172A',
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   modalBotones: {
     flexDirection: 'row',
@@ -694,17 +753,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: '#F1F5F9',
   },
   textoModalCancelar: {
-    color: '#3A3A3C',
+    color: '#334155',
     fontWeight: '600',
   },
   botonModalAgregar: {
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#34C759',
+    backgroundColor: '#0284C7',
   },
   textoModalAgregar: {
     color: '#FFFFFF',

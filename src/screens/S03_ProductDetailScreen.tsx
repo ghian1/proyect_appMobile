@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
@@ -69,7 +70,7 @@ export function S03_ProductDetailScreen(): React.ReactNode {
   if (cargando) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#0284C7" />
       </View>
     );
   }
@@ -91,25 +92,31 @@ export function S03_ProductDetailScreen(): React.ReactNode {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        
+        {/* CONTENEDOR DE IMAGEN */}
         {producto.imagenUrl ? (
-          <Image source={{ uri: producto.imagenUrl }} style={styles.imagen} />
+          <View style={styles.imagenWrapper}>
+            <Image source={{ uri: producto.imagenUrl }} style={styles.imagen} resizeMode="contain" />
+          </View>
         ) : (
           <View style={styles.imagenPlaceholder}>
+            <Ionicons name="image-outline" size={40} color="#94A3B8" />
             <Text style={styles.textoPlaceholder}>Sin Imagen</Text>
           </View>
         )}
 
+        {/* TARJETA DE INFORMACIÓN */}
         <View style={styles.cardInfo}>
           <Text style={styles.categoria}>{nombreCategoria}</Text>
           <Text style={styles.nombre}>{producto.nombre}</Text>
-          <Text style={styles.precio}>${producto.precio.toLocaleString('es-AR')}</Text>
+          <Text style={styles.precio}>${producto.precio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</Text>
 
           <View style={styles.separator} />
 
           <View style={styles.row}>
             <Text style={styles.label}>Stock Disponible:</Text>
-            {/* Badge dinámico con colores para Rojo, Naranja y Verde */}
+            {/* Badge dinámico */}
             <View
               style={[
                 styles.badgeStock,
@@ -143,98 +150,203 @@ export function S03_ProductDetailScreen(): React.ReactNode {
           ) : null}
         </View>
 
+        {/* BOTONES DE ACCIÓN */}
         <View style={styles.acciones}>
           <TouchableOpacity
             style={styles.botonEditar}
             onPress={() => navigation.navigate('ProductEdit', { productId })}
+            activeOpacity={0.8}
           >
+            <Ionicons name="create-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
             <Text style={styles.textoBotonEditar}>Editar Producto</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.botonEliminar} onPress={handleEliminar}>
-            <Text style={styles.textoBotonEliminar}>Eliminar</Text>
+          <TouchableOpacity 
+            style={styles.botonEliminar} 
+            onPress={handleEliminar}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="trash-outline" size={18} color="#DC2626" style={{ marginRight: 6 }} />
+            <Text style={styles.textoBotonEliminar}>Eliminar Producto</Text>
           </TouchableOpacity>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F4F7' },
-  content: { padding: 20 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  imagen: { width: '100%', height: 220, borderRadius: 12, marginBottom: 16 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F0F9FF', // Fondo celeste sutil característico
+  },
+  content: { 
+    padding: 20,
+    paddingBottom: 40,
+  },
+  center: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+  },
+  imagenWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E0F2FE',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  imagen: { 
+    width: '100%', 
+    height: 220, 
+    borderRadius: 12, 
+  },
   imagenPlaceholder: {
     width: '100%',
-    height: 160,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 12,
+    height: 180,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E0F2FE',
+    borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  textoPlaceholder: { color: '#9CA3AF', fontSize: 16 },
+  textoPlaceholder: { 
+    color: '#94A3B8', 
+    fontSize: 14,
+    marginTop: 6,
+    fontWeight: '500',
+  },
   cardInfo: {
     backgroundColor: '#FFFFFF',
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E0F2FE',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
   },
-  categoria: { fontSize: 12, fontWeight: 'bold', color: '#007AFF', marginBottom: 4 },
-  nombre: { fontSize: 22, fontWeight: 'bold', color: '#1A1A1A' },
-  precio: { fontSize: 20, fontWeight: '600', color: '#1C1C1E', marginTop: 6 },
-  separator: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 14 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  label: { fontSize: 14, color: '#666', fontWeight: '500' },
+  categoria: { 
+    fontSize: 11, 
+    fontWeight: '700', 
+    color: '#0284C7', // Azul principal del logo
+    marginBottom: 6,
+    letterSpacing: 0.8,
+  },
+  nombre: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: '#0F172A',
+    lineHeight: 26,
+  },
+  precio: { 
+    fontSize: 22, 
+    fontWeight: '700', 
+    color: '#0EA5E9', // Azul claro dinámico para resaltar precio
+    marginTop: 8, 
+  },
+  separator: { 
+    height: 1, 
+    backgroundColor: '#F1F5F9', 
+    marginVertical: 16, 
+  },
+  row: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+  },
+  label: { 
+    fontSize: 14, 
+    color: '#64748B', 
+    fontWeight: '500', 
+  },
   
-  // Estilos para los estados dinámicos del badge de stock
+  // Estilos para los badges de stock
   badgeStock: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   badgeSinStock: {
-    backgroundColor: '#FFEBEE', // Fondo rojo suave
+    backgroundColor: '#FEF2F2', 
   },
   badgeCritico: {
-    backgroundColor: '#FFEDD5', // Fondo naranja/ámbar suave
+    backgroundColor: '#FFFBEB', 
   },
   badgeNormal: {
-    backgroundColor: '#E8F5E9', // Fondo verde suave
+    backgroundColor: '#F0FDF4', 
   },
   textoBadgeStock: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 13,
+    fontWeight: '700',
   },
   textoSinStock: {
-    color: '#D32F2F', // Rojo fuerte
+    color: '#DC2626', 
   },
   textoCritico: {
-    color: '#C2410C', // Naranja/Marrón fuerte
+    color: '#D97706', 
   },
   textoNormal: {
-    color: '#2E7D32', // Verde fuerte
+    color: '#16A34A', 
   },
 
-  seccionDesc: { marginTop: 12 },
-  descripcion: { fontSize: 14, color: '#4B5563', marginTop: 4, lineHeight: 20 },
-  acciones: { gap: 10 },
+  seccionDesc: { 
+    marginTop: 16, 
+  },
+  descripcion: { 
+    fontSize: 14, 
+    color: '#334155', 
+    marginTop: 4, 
+    lineHeight: 20, 
+  },
+  acciones: { 
+    gap: 12, 
+  },
   botonEditar: {
-    backgroundColor: '#007AFF',
-    height: 48,
-    borderRadius: 8,
+    backgroundColor: '#0284C7', // Azul corporativo del logo
+    height: 50,
+    borderRadius: 12,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  textoBotonEditar: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
+  textoBotonEditar: { 
+    color: '#FFFFFF', 
+    fontWeight: 'bold', 
+    fontSize: 15, 
+  },
   botonEliminar: {
-    backgroundColor: '#FEE2E2',
-    height: 44,
-    borderRadius: 8,
+    backgroundColor: '#FEF2F2',
+    height: 48,
+    borderRadius: 12,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
   },
-  textoBotonEliminar: { color: '#DC2626', fontWeight: '600', fontSize: 15 },
+  textoBotonEliminar: { 
+    color: '#DC2626', 
+    fontWeight: '600', 
+    fontSize: 15, 
+  },
 });

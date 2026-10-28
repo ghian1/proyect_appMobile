@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
@@ -262,7 +263,6 @@ export function S09_VentasScreen() {
 
         return (
             <View style={styles.card}>
-                {/* Contenedor de la imagen con fondo blanco estilo e-commerce */}
                 <View style={styles.imagenContenedor}>
                     {item.imagenUrl ? (
                         <Image
@@ -271,7 +271,10 @@ export function S09_VentasScreen() {
                             resizeMode="contain"
                         />
                     ) : (
-                        <Text style={styles.textoSinImagen}>Sin Imagen</Text>
+                        <View style={styles.placeholderIconContainer}>
+                            <Ionicons name="image-outline" size={24} color="#94A3B8" />
+                            <Text style={styles.textoSinImagen}>Sin Imagen</Text>
+                        </View>
                     )}
                 </View>
 
@@ -286,20 +289,17 @@ export function S09_VentasScreen() {
                         {item.nombre}
                     </Text>
 
-                    {/* Precio en tono neutro */}
                     <Text style={styles.cardPrecio}>${item.precio.toFixed(2)}</Text>
                 </View>
 
-                {/* Indicador de stock actual para control del vendedor */}
                 <View style={styles.cardStockContainer}>
                     <View style={[styles.badgeStock, sinStock ? styles.badgeSinStock : styles.badgeConStock]}>
                         <Text style={[styles.textoBadgeStock, sinStock ? styles.textoSinStock : styles.textoConStock]}>
-                            {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} unidades.`}
+                            {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} u.`}
                         </Text>
                     </View>
                 </View>
 
-                {/* Botones de control / Agregar al carrito */}
                 <View style={styles.cardAcciones}>
                     {sinStock ? (
                         <View style={styles.bloqueAgotado}>
@@ -310,6 +310,7 @@ export function S09_VentasScreen() {
                             <TouchableOpacity
                                 style={styles.botonRestar}
                                 onPress={() => item.id && restarDelCarrito(item.id)}
+                                activeOpacity={0.7}
                             >
                                 <Text style={styles.textoBotonRestar}>-</Text>
                             </TouchableOpacity>
@@ -319,6 +320,7 @@ export function S09_VentasScreen() {
                             <TouchableOpacity
                                 style={styles.botonSumarPequeno}
                                 onPress={() => agregarAlCarrito(item)}
+                                activeOpacity={0.7}
                             >
                                 <Text style={styles.textoBotonSumar}>+</Text>
                             </TouchableOpacity>
@@ -327,7 +329,9 @@ export function S09_VentasScreen() {
                         <TouchableOpacity
                             style={styles.botonAgregarDirecto}
                             onPress={() => agregarAlCarrito(item)}
+                            activeOpacity={0.8}
                         >
+                            <Ionicons name="cart-outline" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
                             <Text style={styles.textoAgregarDirecto}>Agregar</Text>
                         </TouchableOpacity>
                     )}
@@ -339,17 +343,25 @@ export function S09_VentasScreen() {
     return (
         <SafeAreaView style={styles.contenedor}>
             <View style={styles.buscadorContainer}>
-                <TextInput
-                    style={styles.inputBuscador}
-                    placeholder="Buscar producto para vender..."
-                    placeholderTextColor="#8E8E93"
-                    value={busqueda}
-                    onChangeText={setBusqueda}
-                    autoCapitalize="none"
-                    returnKeyType="done"
-                    blurOnSubmit={true}
-                    onSubmitEditing={Keyboard.dismiss}
-                />
+                <View style={styles.inputBuscadorWrapper}>
+                    <Ionicons name="search-outline" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+                    <TextInput
+                        style={styles.inputBuscador}
+                        placeholder="Buscar producto para vender..."
+                        placeholderTextColor="#94A3B8"
+                        value={busqueda}
+                        onChangeText={setBusqueda}
+                        autoCapitalize="none"
+                        returnKeyType="done"
+                        blurOnSubmit={true}
+                        onSubmitEditing={Keyboard.dismiss}
+                    />
+                    {busqueda.length > 0 && (
+                        <TouchableOpacity onPress={() => setBusqueda('')}>
+                            <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
 
             <View style={styles.filtrosContainer}>
@@ -462,7 +474,7 @@ export function S09_VentasScreen() {
 
             {cargando ? (
                 <View style={styles.centrado}>
-                    <ActivityIndicator size="large" color="#007AFF" />
+                    <ActivityIndicator size="large" color="#0284C7" />
                     <Text style={styles.textoCargando}>Cargando catálogo para venta...</Text>
                 </View>
             ) : (
@@ -474,21 +486,29 @@ export function S09_VentasScreen() {
                     renderItem={renderProductoItem}
                     contentContainerStyle={styles.listaProductos}
                     columnWrapperStyle={styles.filaGrid}
+                    ListEmptyComponent={
+                        <View style={styles.centrado}>
+                            <Ionicons name="cart-outline" size={48} color="#CBD5E1" style={{ marginBottom: 8 }} />
+                            <Text style={styles.textoVacio}>No se encontraron productos disponibles.</Text>
+                        </View>
+                    }
                 />
             )}
 
             {totalCantidad > 0 && (
                 <View style={styles.barraCarritoFlotante}>
                     <View>
-                        <Text style={styles.textoItemsCarrito}>{totalCantidad} items agregados</Text>
+                        <Text style={styles.textoItemsCarrito}>{totalCantidad} items en carrito</Text>
                         <Text style={styles.textoTotalCarrito}>${totalImporte.toFixed(2)}</Text>
                     </View>
 
                     <TouchableOpacity
                         style={styles.botonVerCarrito}
                         onPress={() => setModalVisible(true)}
+                        activeOpacity={0.8}
                     >
-                        <Text style={styles.textoBotonVerCarrito}>Cobrar ➔</Text>
+                        <Ionicons name="cash-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.textoBotonVerCarrito}>Cobrar</Text>
                     </TouchableOpacity>
                 </View>
             )}
@@ -504,7 +524,7 @@ export function S09_VentasScreen() {
                             <View style={styles.modalContenido}>
                                 <Text style={styles.modalTitulo}>Resumen de Venta</Text>
 
-                                <ScrollView style={styles.scrollModal} nestedScrollEnabled>
+                                <ScrollView style={styles.scrollModal} nestedScrollEnabled={true} showsVerticalScrollIndicator={false}>
                                     {listaItemsCarrito.map((item) => (
                                         <View key={item.idProducto} style={styles.filaItemCarrito}>
                                             <View style={{ flex: 1 }}>
@@ -532,6 +552,7 @@ export function S09_VentasScreen() {
                                             key={m}
                                             style={[styles.chipPago, medioPago === m && styles.chipPagoActivo]}
                                             onPress={() => setMedioPago(m)}
+                                            activeOpacity={0.8}
                                         >
                                             <Text
                                                 style={[
@@ -575,18 +596,21 @@ export function S09_VentasScreen() {
                                     <View style={styles.seccionFiado}>
                                         <Text style={styles.labelInput}>Seleccionar Cliente de la Libreta:</Text>
 
-                                        <TextInput
-                                            style={styles.inputBuscadorCliente}
-                                            placeholder="Buscar cliente por nombre..."
-                                            placeholderTextColor="#8E8E93"
-                                            value={busquedaCliente}
-                                            onChangeText={setBusquedaCliente}
-                                            returnKeyType="done"
-                                            blurOnSubmit={true}
-                                            onSubmitEditing={Keyboard.dismiss}
-                                        />
+                                        <View style={styles.inputBuscadorClienteWrapper}>
+                                            <Ionicons name="search-outline" size={16} color="#94A3B8" style={{ marginRight: 6 }} />
+                                            <TextInput
+                                                style={styles.inputBuscadorCliente}
+                                                placeholder="Buscar cliente por nombre..."
+                                                placeholderTextColor="#94A3B8"
+                                                value={busquedaCliente}
+                                                onChangeText={setBusquedaCliente}
+                                                returnKeyType="done"
+                                                blurOnSubmit={true}
+                                                onSubmitEditing={Keyboard.dismiss}
+                                            />
+                                        </View>
 
-                                        <ScrollView style={styles.scrollClientes} nestedScrollEnabled>
+                                        <ScrollView style={styles.scrollClientes} nestedScrollEnabled={true} showsVerticalScrollIndicator={false}>
                                             {clientesFiltrados.length === 0 ? (
                                                 <Text style={styles.textoSinClientes}>No se encontraron clientes registrados.</Text>
                                             ) : (
@@ -600,6 +624,7 @@ export function S09_VentasScreen() {
                                                                 seleccionado && styles.tarjetaClienteSeleccionado,
                                                             ]}
                                                             onPress={() => setClienteFiadoSeleccionado(cliente)}
+                                                            activeOpacity={0.8}
                                                         >
                                                             <View>
                                                                 <Text style={[styles.nombreCliente, seleccionado && styles.textoClienteSeleccionado]}>
@@ -609,7 +634,7 @@ export function S09_VentasScreen() {
                                                                     Deuda actual: ${cliente.deudaTotal?.toFixed(2) || '0.00'}
                                                                 </Text>
                                                             </View>
-                                                            {seleccionado && <Text style={styles.checkSeleccionado}>✓</Text>}
+                                                            {seleccionado && <Ionicons name="checkmark-circle" size={20} color="#0284C7" />}
                                                         </TouchableOpacity>
                                                     );
                                                 })
@@ -624,7 +649,7 @@ export function S09_VentasScreen() {
                                         <TextInput
                                             style={styles.inputEfectivo}
                                             placeholder="0.00"
-                                            placeholderTextColor="#8E8E93"
+                                            placeholderTextColor="#94A3B8"
                                             keyboardType="numeric"
                                             value={montoPagaCon}
                                             onChangeText={setMontoPagaCon}
@@ -644,6 +669,7 @@ export function S09_VentasScreen() {
                                     <TouchableOpacity
                                         style={styles.botonCancelarModal}
                                         onPress={() => setModalVisible(false)}
+                                        activeOpacity={0.8}
                                     >
                                         <Text style={styles.textoCancelar}>Volver</Text>
                                     </TouchableOpacity>
@@ -652,6 +678,7 @@ export function S09_VentasScreen() {
                                         style={[styles.botonCobrarModal, procesandoVenta && styles.botonDeshabilitado]}
                                         onPress={handleConfirmarVenta}
                                         disabled={procesandoVenta}
+                                        activeOpacity={0.8}
                                     >
                                         {procesandoVenta ? (
                                             <ActivityIndicator color="#FFF" />
@@ -670,29 +697,45 @@ export function S09_VentasScreen() {
 }
 
 const styles = StyleSheet.create({
-    contenedor: { flex: 1, backgroundColor: '#F2F4F7' },
-    buscadorContainer: { paddingHorizontal: 16, paddingTop: 12, backgroundColor: '#FFFFFF' },
-    inputBuscador: {
-        backgroundColor: '#E5E5EA',
+    contenedor: { 
+        flex: 1, 
+        backgroundColor: '#F0F9FF', 
+    },
+    buscadorContainer: { 
+        paddingHorizontal: 16, 
+        paddingVertical: 12, 
+        backgroundColor: '#FFFFFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0F2FE',
+    },
+    inputBuscadorWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F8FAFC',
         borderRadius: 10,
         paddingHorizontal: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    inputBuscador: {
+        flex: 1,
         paddingVertical: 9,
         fontSize: 15,
-        color: '#1C1C1E',
+        color: '#0F172A',
     },
     filtrosContainer: {
         backgroundColor: '#FFFFFF',
-        paddingBottom: 8,
+        paddingBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: '#E0F2FE',
     },
     segmentedContainer: {
         flexDirection: 'row',
-        backgroundColor: '#E5E7EB',
+        backgroundColor: '#F1F5F9',
         borderRadius: 10,
         padding: 3,
         marginHorizontal: 16,
-        marginTop: 8,
+        marginTop: 6,
         marginBottom: 8,
     },
     segmentItem: {
@@ -703,27 +746,27 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     textoSegment: {
-        fontSize: 13,
-        color: '#4B5563',
+        fontSize: 12,
+        color: '#64748B',
         fontWeight: '500',
     },
     segmentItemTodasActivo: {
         backgroundColor: '#FFFFFF',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.12,
+        shadowOpacity: 0.08,
         shadowRadius: 2,
         elevation: 2,
     },
     textoSegmentTodasActivo: {
-        color: '#111827',
+        color: '#0F172A',
         fontWeight: '600',
     },
     segmentItemCriticoActivo: {
-        backgroundColor: '#FFEDD5',
+        backgroundColor: '#FEF3C7',
     },
     textoSegmentCriticoActivo: {
-        color: '#EA580C',
+        color: '#D97706',
         fontWeight: '600',
     },
     segmentItemSinStockActivo: {
@@ -735,7 +778,7 @@ const styles = StyleSheet.create({
     },
     separadorFiltros: {
         height: 1,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: '#F1F5F9',
         marginHorizontal: 16,
         marginBottom: 8,
     },
@@ -745,44 +788,56 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     chipCategoria: {
-        paddingHorizontal: 13,
+        paddingHorizontal: 14,
         paddingVertical: 6,
         borderRadius: 16,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: '#F1F5F9',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: '#E2E8F0',
         marginRight: 6,
     },
     chipCategoriaSeleccionada: {
-        backgroundColor: '#2563EB',
-        borderColor: '#2563EB',
+        backgroundColor: '#0284C7',
+        borderColor: '#0284C7',
     },
     textoChipCategoria: {
         fontSize: 13,
-        color: '#4B5563',
+        color: '#475569',
         fontWeight: '500',
     },
     textoChipCategoriaSeleccionada: {
         color: '#FFFFFF',
         fontWeight: '600',
     },
-    listaProductos: { padding: 12, paddingBottom: 100 },
-    filaGrid: { justifyContent: 'space-between', marginBottom: 12 },
+    listaProductos: { 
+        padding: 12, 
+        paddingBottom: 90, 
+    },
+    filaGrid: { 
+        justifyContent: 'space-between', 
+        marginBottom: 12, 
+    },
     card: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 12,
+        borderRadius: 14,
         padding: 10,
         width: '48.5%',
         justifyContent: 'space-between',
+        borderWidth: 1,
+        borderColor: '#E0F2FE',
+        shadowColor: '#0284C7',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
         elevation: 2,
     },
     imagenContenedor: {
         width: '100%',
         height: 100,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 8,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 10,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: '#F1F5F9',
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
@@ -792,94 +847,191 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
     },
-    textoSinImagen: {
-        fontSize: 10,
-        color: '#9CA3AF',
-        textAlign: 'center',
+    placeholderIconContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    cardInfo: { flex: 1, marginBottom: 6 },
-    cardCategoria: { fontSize: 10, color: '#8E8E93', textTransform: 'uppercase', marginBottom: 2 },
-    cardTitulo: { fontSize: 14, fontWeight: '600', color: '#1C1C1E', marginBottom: 4, lineHeight: 18 },
-    cardPrecio: { fontSize: 15, fontWeight: '600', color: '#1C1C1E' },
-    
-    // Estilos del indicador de stock para control del vendedor
-    cardStockContainer: { marginBottom: 8 },
-    badgeStock: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, alignItems: 'center' },
-    badgeConStock: { backgroundColor: '#F3F4F6' },
-    badgeSinStock: { backgroundColor: '#FFEBEE' },
-    textoBadgeStock: { fontSize: 11, fontWeight: '600' },
-    textoConStock: { color: '#4B5563' },
-    textoSinStock: { color: '#D32F2F' },
-
-    cardAcciones: { alignItems: 'stretch', marginTop: 'auto' },
+    textoSinImagen: {
+        fontSize: 11,
+        color: '#94A3B8',
+        textAlign: 'center',
+        marginTop: 4,
+        fontWeight: '500',
+    },
+    cardInfo: { 
+        flex: 1, 
+        marginBottom: 6, 
+    },
+    cardCategoria: { 
+        fontSize: 10, 
+        color: '#0284C7', 
+        textTransform: 'uppercase', 
+        marginBottom: 2,
+        fontWeight: '700',
+    },
+    cardTitulo: { 
+        fontSize: 14, 
+        fontWeight: '600', 
+        color: '#0F172A', 
+        marginBottom: 4, 
+        lineHeight: 18, 
+    },
+    cardPrecio: { 
+        fontSize: 15, 
+        fontWeight: '700', 
+        color: '#0EA5E9', 
+    },
+    cardStockContainer: { 
+        alignItems: 'flex-start', 
+        marginBottom: 8, 
+    },
+    badgeStock: { 
+        paddingHorizontal: 8, 
+        paddingVertical: 3, 
+        borderRadius: 6, 
+        width: '100%', 
+        alignItems: 'center', 
+    },
+    badgeConStock: { 
+        backgroundColor: '#F0FDF4', 
+    },
+    badgeSinStock: { 
+        backgroundColor: '#FEF2F2', 
+    },
+    textoBadgeStock: { 
+        fontSize: 11, 
+        fontWeight: '700', 
+    },
+    textoConStock: { 
+        color: '#16A34A', 
+    },
+    textoSinStock: { 
+        color: '#DC2626', 
+    },
+    cardAcciones: {
+        marginTop: 'auto',
+    },
     bloqueAgotado: {
-        backgroundColor: '#F3F4F6',
-        paddingVertical: 8,
+        backgroundColor: '#F1F5F9',
+        paddingVertical: 6,
         borderRadius: 8,
         alignItems: 'center',
     },
-    textoAgotado: { color: '#9CA3AF', fontSize: 13, fontWeight: '600' },
+    textoAgotado: {
+        color: '#94A3B8',
+        fontSize: 12,
+        fontWeight: '600',
+    },
     selectorCantidad: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#F2F4F7',
+        backgroundColor: '#F0F9FF',
         borderRadius: 8,
-        padding: 4,
+        borderWidth: 1,
+        borderColor: '#BAE6FD',
+        overflow: 'hidden',
     },
     botonRestar: {
-        backgroundColor: '#E5E5EA',
-        width: 28,
-        height: 28,
-        borderRadius: 6,
-        justifyContent: 'center',
-        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: '#E0F2FE',
     },
-    textoBotonRestar: { fontSize: 16, fontWeight: 'bold', color: '#1C1C1E' },
-    textoCantidad: { fontSize: 14, fontWeight: 'bold', color: '#1C1C1E' },
+    textoBotonRestar: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#0284C7',
+    },
+    textoCantidad: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#0F172A',
+    },
     botonSumarPequeno: {
-        backgroundColor: '#007AFF',
-        width: 28,
-        height: 28,
-        borderRadius: 6,
-        justifyContent: 'center',
-        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: '#0284C7',
     },
-    textoBotonSumar: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
+    textoBotonSumar: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#FFFFFF',
+    },
     botonAgregarDirecto: {
-        backgroundColor: '#007AFF',
-        paddingVertical: 8,
+        backgroundColor: '#0284C7',
+        flexDirection: 'row',
+        paddingVertical: 7,
         borderRadius: 8,
         alignItems: 'center',
+        justifyContent: 'center',
     },
-    textoAgregarDirecto: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-    centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginTop: 40 },
-    textoCargando: { marginTop: 10, color: '#8E8E93', fontSize: 14 },
+    textoAgregarDirecto: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    centrado: { 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        padding: 20, 
+        marginTop: 40, 
+    },
+    textoCargando: { 
+        marginTop: 10, 
+        color: '#64748B', 
+        fontSize: 14, 
+    },
+    textoVacio: { 
+        color: '#64748B', 
+        fontSize: 15, 
+        textAlign: 'center', 
+    },
     barraCarritoFlotante: {
         position: 'absolute',
         bottom: 16,
         left: 16,
         right: 16,
-        backgroundColor: '#1C1C1E',
+        backgroundColor: '#0F172A',
         borderRadius: 14,
-        padding: 14,
+        paddingHorizontal: 18,
+        paddingVertical: 12,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
         elevation: 6,
     },
-    textoItemsCarrito: { color: '#8E8E93', fontSize: 12 },
-    textoTotalCarrito: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
+    textoItemsCarrito: {
+        color: '#94A3B8',
+        fontSize: 11,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+    },
+    textoTotalCarrito: {
+        color: '#FFFFFF',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
     botonVerCarrito: {
-        backgroundColor: '#34C759',
-        paddingHorizontal: 18,
+        backgroundColor: '#0284C7',
+        flexDirection: 'row',
+        paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 10,
+        alignItems: 'center',
     },
-    textoBotonVerCarrito: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
+    textoBotonVerCarrito: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 15,
+    },
     modalFondo: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(15, 23, 42, 0.5)',
         justifyContent: 'flex-end',
     },
     modalContenido: {
@@ -888,102 +1040,274 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 20,
         padding: 20,
         maxHeight: '85%',
+        borderWidth: 1,
+        borderColor: '#E0F2FE',
     },
-    modalTitulo: { fontSize: 18, fontWeight: 'bold', color: '#1C1C1E', marginBottom: 12 },
-    scrollModal: { maxHeight: 150, marginBottom: 10 },
+    modalTitulo: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#0F172A',
+        marginBottom: 12,
+    },
+    scrollModal: {
+        maxHeight: 150,
+        marginBottom: 10,
+    },
     filaItemCarrito: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingVertical: 6,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: '#F1F5F9',
     },
-    itemNombre: { fontSize: 14, color: '#1C1C1E', fontWeight: '500' },
-    itemDetalle: { fontSize: 12, color: '#8E8E93' },
-    itemSubtotal: { fontSize: 14, fontWeight: 'bold', color: '#1C1C1E' },
-    divisor: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 10 },
-    filaTotal: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-    labelTotal: { fontSize: 15, fontWeight: 'bold', color: '#3A3A3C' },
-    valorTotal: { fontSize: 20, fontWeight: 'bold', color: '#34C759' },
-    labelSeccion: { fontSize: 14, fontWeight: '600', color: '#3A3A3C', marginBottom: 8 },
-    contenedorMediosPago: { flexDirection: 'row', gap: 6, marginBottom: 14 },
+    itemNombre: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#0F172A',
+    },
+    itemDetalle: {
+        fontSize: 12,
+        color: '#64748B',
+    },
+    itemSubtotal: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#0F172A',
+    },
+    divisor: {
+        height: 1,
+        backgroundColor: '#E2E8F0',
+        marginVertical: 10,
+    },
+    filaTotal: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    labelTotal: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#64748B',
+    },
+    valorTotal: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#0284C7',
+    },
+    labelSeccion: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#334155',
+        marginBottom: 8,
+    },
+    contenedorMediosPago: {
+        flexDirection: 'row',
+        gap: 6,
+        marginBottom: 14,
+    },
     chipPago: {
         flex: 1,
         paddingVertical: 8,
         paddingHorizontal: 4,
         borderRadius: 8,
-        backgroundColor: '#F2F4F7',
-        alignItems: 'center',
+        backgroundColor: '#F1F5F9',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: '#E2E8F0',
+        alignItems: 'center',
     },
-    chipPagoActivo: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-    textoChipPago: { fontSize: 12, color: '#4B5563', fontWeight: '500' },
-    textoChipPagoActivo: { color: '#FFFFFF', fontWeight: 'bold' },
-    seccionMP: { alignItems: 'center', marginVertical: 10 },
-    instruccionQR: { fontSize: 13, color: '#3A3A3C', marginBottom: 8, fontWeight: '500' },
-    contenedorImagenQR: { padding: 8, backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
-    imagenQR: { width: 140, height: 140 },
-    alertaMP: { fontSize: 11, color: '#8E8E93', marginTop: 6, textAlign: 'center' },
-    seccionTransferencia: { backgroundColor: '#F8FAFC', padding: 12, borderRadius: 8, marginBottom: 12 },
-    tituloTransferencia: { fontSize: 14, fontWeight: 'bold', color: '#1C1C1E', marginBottom: 4 },
-    montoTransferencia: { fontSize: 15, fontWeight: 'bold', color: '#007AFF', marginBottom: 6 },
-    alertaTransferencia: { fontSize: 12, color: '#64748B', lineHeight: 16 },
-    seccionFiado: { marginBottom: 12 },
-    labelInput: { fontSize: 13, fontWeight: '600', color: '#3A3A3C', marginBottom: 6 },
-    inputBuscadorCliente: {
-        backgroundColor: '#F2F4F7',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        fontSize: 14,
-        color: '#1C1C1E',
+    chipPagoActivo: {
+        backgroundColor: '#0284C7',
+        borderColor: '#0284C7',
+    },
+    textoChipPago: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#475569',
+    },
+    textoChipPagoActivo: {
+        color: '#FFFFFF',
+    },
+    seccionMP: {
+        alignItems: 'center',
+        backgroundColor: '#F8FAFC',
+        padding: 12,
+        borderRadius: 12,
+        marginBottom: 14,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    instruccionQR: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#0F172A',
         marginBottom: 8,
     },
-    scrollClientes: { maxHeight: 120 },
+    contenedorImagenQR: {
+        backgroundColor: '#FFFFFF',
+        padding: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    imagenQR: {
+        width: 140,
+        height: 140,
+    },
+    alertaMP: {
+        fontSize: 11,
+        color: '#64748B',
+        marginTop: 8,
+        textAlign: 'center',
+    },
+    seccionTransferencia: {
+        backgroundColor: '#F8FAFC',
+        padding: 14,
+        borderRadius: 12,
+        marginBottom: 14,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    tituloTransferencia: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#0F172A',
+        marginBottom: 4,
+    },
+    montoTransferencia: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#0284C7',
+        marginBottom: 8,
+    },
+    alertaTransferencia: {
+        fontSize: 12,
+        color: '#64748B',
+        lineHeight: 16,
+    },
+    seccionFiado: {
+        marginBottom: 14,
+    },
+    inputBuscadorClienteWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F8FAFC',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        marginBottom: 8,
+    },
+    inputBuscadorCliente: {
+        flex: 1,
+        height: 38,
+        fontSize: 13,
+        color: '#0F172A',
+    },
+    scrollClientes: {
+        maxHeight: 130,
+    },
+    textoSinClientes: {
+        fontSize: 13,
+        color: '#64748B',
+        textAlign: 'center',
+        paddingVertical: 10,
+    },
     tarjetaClienteFiado: {
+        backgroundColor: '#F8FAFC',
+        padding: 10,
+        borderRadius: 8,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 10,
-        borderRadius: 8,
-        backgroundColor: '#F9FAFB',
         marginBottom: 6,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: '#E2E8F0',
     },
-    tarjetaClienteSeleccionado: { backgroundColor: '#EFF6FF', borderColor: '#007AFF' },
-    nombreCliente: { fontSize: 14, fontWeight: '600', color: '#1C1C1E' },
-    textoClienteSeleccionado: { color: '#007AFF' },
-    deudaCliente: { fontSize: 12, color: '#8E8E93', marginTop: 2 },
-    checkSeleccionado: { color: '#007AFF', fontWeight: 'bold', fontSize: 16 },
-    seccionEfectivo: { marginBottom: 12 },
+    tarjetaClienteSeleccionado: {
+        backgroundColor: '#E0F2FE',
+        borderColor: '#0284C7',
+    },
+    nombreCliente: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#0F172A',
+    },
+    textoClienteSeleccionado: {
+        color: '#0369A1',
+    },
+    deudaCliente: {
+        fontSize: 11,
+        color: '#64748B',
+        marginTop: 2,
+    },
+    checkSeleccionado: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#0284C7',
+    },
+    seccionEfectivo: {
+        marginBottom: 14,
+    },
+    labelInput: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#334155',
+        marginBottom: 6,
+    },
     inputEfectivo: {
-        backgroundColor: '#F2F4F7',
-        borderRadius: 8,
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderRadius: 10,
         paddingHorizontal: 12,
-        paddingVertical: 8,
-        fontSize: 15,
-        color: '#1C1C1E',
+        height: 44,
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#0F172A',
     },
-    textoVuelto: { fontSize: 13, fontWeight: 'bold', color: '#34C759', marginTop: 6 },
-    botonesModal: { flexDirection: 'row', gap: 12, marginTop: 10 },
+    textoVuelto: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#16A34A',
+        marginTop: 6,
+    },
+    botonesModal: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 12,
+        marginTop: 10,
+    },
     botonCancelarModal: {
-        flex: 1,
         paddingVertical: 12,
-        borderRadius: 8,
-        backgroundColor: '#E5E5EA',
-        alignItems: 'center',
+        paddingHorizontal: 18,
+        borderRadius: 10,
+        backgroundColor: '#F1F5F9',
     },
-    textoCancelar: { color: '#3A3A3C', fontWeight: '600', fontSize: 15 },
+    textoCancelar: {
+        color: '#334155',
+        fontWeight: '600',
+        fontSize: 14,
+    },
     botonCobrarModal: {
-        flex: 2,
         paddingVertical: 12,
-        borderRadius: 8,
-        backgroundColor: '#34C759',
+        paddingHorizontal: 20,
+        borderRadius: 10,
+        backgroundColor: '#0284C7',
         alignItems: 'center',
+        shadowColor: '#0284C7',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 3,
     },
-    textoCobrar: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
-    botonDeshabilitado: { backgroundColor: '#9EBAE4' },
+    botonDeshabilitado: {
+        backgroundColor: '#94A3B8',
+    },
+    textoCobrar: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 15,
+    },
 });

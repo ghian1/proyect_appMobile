@@ -1,14 +1,17 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   FieldValue,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp, //Agregamos getDoc para obtener un documento por su ID. 
-  updateDoc
+  serverTimestamp, 
+  updateDoc,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -22,6 +25,7 @@ export interface Producto {
   categorias?: string[]; //Lo hice un array de strings para permitir múltiples categorías por producto. 
   categoria?: string; //La categoría principal del producto, que puede ser una cadena de texto o undefined si no se especifica
   precio: number;
+  precioCosto?: number; // Precio directo del proveedor, no al que se vende.
   stock: number;
   descripcion?: string;
   createdAt?: FieldValue | Date;
@@ -29,6 +33,8 @@ export interface Producto {
 }
 
 export type NuevoProductoInput = Omit<Producto, "id" | "creadoEn" | "actualizadoEn">;
+
+
 
 // 1. Escuchar la lista completa de productos en tiempo real (S02 y S07)
 export function suscribirAProductos(
@@ -89,6 +95,8 @@ export async function crearProducto(datos: NuevoProductoInput): Promise<string> 
     throw new Error("El stock no puede ser negativo (Invariante I-04).");
   }
 
+
+
   // Normalizamos: si viene el array de categorías lo usamos, si viene una sola la metemos en array
   const categoriasFinales = datos.categorias && datos.categorias.length > 0 
     ? datos.categorias 
@@ -138,35 +146,39 @@ export async function actualizarProducto(
   await updateDoc(docRef, payload);
 }
 
-//Categorías por defecto para la barra de filtros superiores
-export const CATEGORIAS_BASE = ['Todas', 'Stock Crítico', 'Sin Stock', 'Comestibles', 'Bebidas', 'Limpieza', 'Almacén'];
+// 4. Eliminar una categoría de la base de datos y limpiarla de los productos asociados
+export async function eliminarCategoriaBD(nombreCategoria: string): Promise<void> {
+  if (!nombreCategoria) throw new Error("Se requiere el nombre de la categoría.");
 
-// Suscripción en tiempo real a la colección de categorías en Firestore
-export const suscribirACategorias = (
-  onUpdate: (categorias: string[]) => void,
-  onError?: (error: Error) => void
-) => {
-  const ref = collection(db, 'categorias');
-  return onSnapshot(
-    query(ref),
-    (snapshot) => {
-      const catsGuardadas = snapshot.docs.map((docSnap) => docSnap.data().nombre as string);
-      const listaUnificada = Array.from(new Set([...CATEGORIAS_BASE, ...catsGuardadas]));
-      onUpdate(listaUnificada);
-    },
-    (error) => {
-      console.error("Error en listener de categorías:", error);
-      if (onError) onError(error);
+  const batch = writeBatch(db);
+
+  // 1. Borrar la categoría de la colección 'categorias'
+  const catRef = doc(db, "categorias", nombreCategoria);
+  batch.delete(catRef);
+
+  // 2. Buscar todos los productos que tengan esa categoría asignada y removerla
+  const productosRef = collection(db, COLECCION_PRODUCTOS);
+  const snapshot = await getDocs(productosRef);
+
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data();
+    const categoriasArray: string[] = data.categorias || [];
+    const categoriaPrincipal: string = data.categoria || '';
+
+    if (categoriasArray.includes(nombreCategoria) || categoriaPrincipal === nombreCategoria) {
+      const nuevasCategorias = categoriasArray.filter((c) => c !== nombreCategoria);
+      const nuevaPrincipal =
+        categoriaPrincipal === nombreCategoria
+          ? nuevasCategorias[0] || 'Almacén'
+          : categoriaPrincipal;
+
+      batch.update(docSnap.ref, {
+        categorias: nuevasCategorias,
+        categoria: nuevaPrincipal,
+      });
     }
-  );
-};
-
-//Guardar una categoría nueva creada por el comerciante en Firestore
-export const crearCategoriaBD = async (nombre: string): Promise<void> => {
-  if (!nombre || !nombre.trim()) return;
-  const ref = collection(db, 'categorias');
-  await addDoc(ref, { 
-    nombre: nombre.trim(),
-    creadoEn: serverTimestamp() 
   });
-};
+
+  // 3. Ejecutar todas las operaciones en lote en Firestore
+  await batch.commit();
+}

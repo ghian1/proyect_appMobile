@@ -1,8 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Keyboard,
@@ -17,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   CATEGORIAS_BASE,
   Producto,
+  eliminarCategoriaBD,
   suscribirACategorias,
   suscribirAProductos,
 } from '../services/productService';
@@ -24,35 +27,57 @@ import { StockStackParamList } from '../types/navigation';
 
 type StockNavProp = NativeStackNavigationProp<StockStackParamList>;
 
-// NUEVO: Estados de stock limpios: 'Todas', 'Stock Crítico' y 'Sin Stock'
 type EstadoStock = 'Todas' | 'Stock Crítico' | 'Sin Stock';
 
 export function S07_StockListScreen() {
   const navigation = useNavigation<StockNavProp>();
   const [productos, setProductos] = useState<Producto[]>([]);
-  // El carrusel de categorías ahora es dinámico y en tiempo real
   const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE);
   const [cargando, setCargando] = useState<boolean>(true);
   const [busqueda, setBusqueda] = useState<string>('');
-  // Separamos el estado de stock de las categorías y permitimos multi-selección de rubros
   const [estadoStockSeleccionado, setEstadoStockSeleccionado] = useState<EstadoStock>('Todas');
   const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<string[]>([]);
 
-  // Dejamos solo los rubros de productos en la lista para no mezclar con estados de stock
   const categoriasRubros = useMemo(() => {
     return categoriasBarra.filter(
       (c) => c !== 'Todas' && c !== 'Stock Crítico' && c !== 'Sin Stock'
     );
   }, [categoriasBarra]);
 
-  // Handler toggle para activar o desactivar categorías dinámicamente
   const toggleCategoria = (cat: string) => {
     setCategoriasSeleccionadas((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
     );
   };
 
-  // Suscripción en tiempo real a productos de Firestore
+  const handleLongPressCategoria = (cat: string) => {
+    if (cat === 'Todas' || cat === 'Almacén') {
+      Alert.alert('Aviso', `La categoría "${cat}" no se puede eliminar por seguridad.`);
+      return;
+    }
+
+    Alert.alert(
+      'Eliminar Categoría',
+      `¿Estás seguro de que querés borrar la categoría "${cat}"? Se quitará de todos los productos que la tengan asignada.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await eliminarCategoriaBD(cat);
+              setCategoriasSeleccionadas((prev) => prev.filter((c) => c !== cat));
+              Alert.alert('Éxito', `La categoría "${cat}" fue eliminada correctamente.`);
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo eliminar la categoría.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   useEffect(() => {
     const desuscribir = suscribirAProductos(
       (datos: Producto[]) => {
@@ -70,7 +95,6 @@ export function S07_StockListScreen() {
     };
   }, []);
 
-  // Suscripción en tiempo real a las categorías creadas por el usuario
   useEffect(() => {
     const desuscribirCats = suscribirACategorias((cats: string[]) => {
       setCategoriasBarra(cats);
@@ -81,24 +105,19 @@ export function S07_StockListScreen() {
     };
   }, []);
 
-  // Filtrado combinado reactivo: texto + estado de stock + categorías múltiples
   const productosFiltrados = useMemo(() => {
     const filtrados = productos.filter((item) => {
       const coincideNombre = item.nombre
         .toLowerCase()
         .includes(busqueda.toLowerCase().trim());
 
-      // Validación del filtro de estado de stock (Todas / Crítico / Sin Stock)
       let coincideStock = true;
       if (estadoStockSeleccionado === 'Stock Crítico') {
-        // [LÓGICA AUTOMÁTICA] Productos con stock entre 1 y 4 unidades
         coincideStock = item.stock > 0 && item.stock < 5;
       } else if (estadoStockSeleccionado === 'Sin Stock') {
-        // [LÓGICA AUTOMÁTICA] Productos agotados
         coincideStock = item.stock <= 0;
       }
 
-      // Validación de categorías múltiples (si hay categorías seleccionadas, buscamos coincidencias)
       let coincideCategoria = true;
       if (categoriasSeleccionadas.length > 0) {
         coincideCategoria = categoriasSeleccionadas.some((catSel) => {
@@ -115,7 +134,6 @@ export function S07_StockListScreen() {
       return coincideNombre && coincideStock && coincideCategoria;
     });
 
-    // Ordenamiento por defecto: productos disponibles primero, agotados al final
     return filtrados.sort((a, b) => {
       const tieneStockA = a.stock > 0 ? 1 : 0;
       const tieneStockB = b.stock > 0 ? 1 : 0;
@@ -134,14 +152,13 @@ export function S07_StockListScreen() {
     return (
       <TouchableOpacity
         style={styles.card}
-        activeOpacity={0.7}
+        activeOpacity={0.8}
         onPress={() => {
           if (item.id) {
             navigation.navigate('ProductDetail', { productId: item.id });
           }
         }}
       >
-        {/* Contenedor de la imagen con fondo blanco estilo e-commerce */}
         <View style={styles.imagenContenedor}>
           {item.imagenUrl ? (
             <Image
@@ -150,7 +167,10 @@ export function S07_StockListScreen() {
               resizeMode="contain"
             />
           ) : (
-            <Text style={styles.textoSinImagen}>Sin Imagen</Text>
+            <View style={styles.placeholderIconContainer}>
+              <Ionicons name="image-outline" size={26} color="#94A3B8" />
+              <Text style={styles.textoSinImagen}>Sin Imagen</Text>
+            </View>
           )}
         </View>
 
@@ -165,11 +185,9 @@ export function S07_StockListScreen() {
             {item.nombre}
           </Text>
 
-          {/* Precio en color neutro (gris oscuro/negro) */}
           <Text style={styles.cardPrecio}>${item.precio.toFixed(2)}</Text>
         </View>
 
-        {/* Stock abajo con color dinámico según unidades */}
         <View style={styles.cardStockContainer}>
           <View
             style={[
@@ -183,7 +201,7 @@ export function S07_StockListScreen() {
                 sinStock ? styles.textoSinStock : styles.textoConStock,
               ]}
             >
-              {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} unidades.`}
+              {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} u.`}
             </Text>
           </View>
         </View>
@@ -193,31 +211,46 @@ export function S07_StockListScreen() {
 
   return (
     <SafeAreaView style={styles.contenedor}>
+      {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.tituloHeader}>Inventario de Stock</Text>
+        <View>
+          <Text style={styles.subtituloHeader}>Inventario General</Text>
+          <Text style={styles.tituloHeader}>Almacén Mingo</Text>
+        </View>
         <TouchableOpacity
           style={styles.botonNuevo}
           onPress={() => navigation.navigate('ProductEdit', {})}
+          activeOpacity={0.8}
         >
-          <Text style={styles.textoBotonNuevo}>+ Producto</Text>
+          <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+          <Text style={styles.textoBotonNuevo}>Producto</Text>
         </TouchableOpacity>
       </View>
 
+      {/* BUSCADOR */}
       <View style={styles.buscadorContainer}>
-        <TextInput
-          style={styles.inputBuscador}
-          placeholder="Buscar producto por nombre..."
-          placeholderTextColor="#8E8E93"
-          value={busqueda}
-          onChangeText={setBusqueda}
-          autoCapitalize="none"
-          returnKeyType="done"
-          blurOnSubmit={true}
-          onSubmitEditing={Keyboard.dismiss}
-        />
+        <View style={styles.inputBuscadorWrapper}>
+          <Ionicons name="search-outline" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+          <TextInput
+            style={styles.inputBuscador}
+            placeholder="Buscar producto por nombre..."
+            placeholderTextColor="#94A3B8"
+            value={busqueda}
+            onChangeText={setBusqueda}
+            autoCapitalize="none"
+            returnKeyType="done"
+            blurOnSubmit={true}
+            onSubmitEditing={Keyboard.dismiss}
+          />
+          {busqueda.length > 0 && (
+            <TouchableOpacity onPress={() => setBusqueda('')}>
+              <Ionicons name="close-circle" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      {/* Rediseño visual de filtros */}
+      {/* FILTROS Y CATEGORÍAS */}
       <View style={styles.filtrosContainer}>
         <View style={styles.segmentedContainer}>
           <TouchableOpacity
@@ -310,6 +343,8 @@ export function S07_StockListScreen() {
                     toggleCategoria(cat);
                   }
                 }}
+                onLongPress={() => handleLongPressCategoria(cat)}
+                delayLongPress={500}
                 activeOpacity={0.7}
               >
                 <Text
@@ -326,9 +361,10 @@ export function S07_StockListScreen() {
         />
       </View>
 
+      {/* LISTADO DE PRODUCTOS */}
       {cargando ? (
         <View style={styles.centrado}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#0284C7" />
           <Text style={styles.textoCargando}>Sincronizando inventario...</Text>
         </View>
       ) : (
@@ -342,6 +378,7 @@ export function S07_StockListScreen() {
           columnWrapperStyle={styles.filaGrid}
           ListEmptyComponent={
             <View style={styles.centrado}>
+              <Ionicons name="cube-outline" size={48} color="#CBD5E1" style={{ marginBottom: 8 }} />
               <Text style={styles.textoVacio}>
                 No se encontraron productos registrados.
               </Text>
@@ -354,41 +391,84 @@ export function S07_StockListScreen() {
 }
 
 const styles = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: '#F2F4F7' },
+  contenedor: { 
+    flex: 1, 
+    backgroundColor: '#F0F9FF', // Fondo celeste sutil general
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 12,
+    paddingBottom: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0F2FE',
+  },
+  subtituloHeader: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  tituloHeader: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: '#0F172A', 
+  },
+  botonNuevo: { 
+    backgroundColor: '#0284C7', 
+    flexDirection: 'row',
+    paddingHorizontal: 14, 
+    paddingVertical: 9, 
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  textoBotonNuevo: { 
+    color: '#FFFFFF', 
+    fontWeight: '600', 
+    fontSize: 14, 
+  },
+  buscadorContainer: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
     backgroundColor: '#FFFFFF',
   },
-  tituloHeader: { fontSize: 22, fontWeight: 'bold', color: '#1C1C1E' },
-  botonNuevo: { backgroundColor: '#007AFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
-  textoBotonNuevo: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
-  buscadorContainer: { paddingHorizontal: 16, paddingTop: 12, backgroundColor: '#FFFFFF' },
-  inputBuscador: {
-    backgroundColor: '#E5E5EA',
+  inputBuscadorWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
     borderRadius: 10,
     paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  inputBuscador: {
+    flex: 1,
     paddingVertical: 9,
     fontSize: 15,
-    color: '#1C1C1E',
+    color: '#0F172A',
   },
   filtrosContainer: {
     backgroundColor: '#FFFFFF',
-    paddingBottom: 8,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#E0F2FE',
   },
   segmentedContainer: {
     flexDirection: 'row',
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#F1F5F9',
     borderRadius: 10,
     padding: 3,
     marginHorizontal: 16,
-    marginTop: 8,
+    marginTop: 6,
     marginBottom: 8,
   },
   segmentItem: {
@@ -399,27 +479,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   textoSegment: {
-    fontSize: 13,
-    color: '#4B5563',
+    fontSize: 12,
+    color: '#64748B',
     fontWeight: '500',
   },
   segmentItemTodasActivo: {
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 2,
   },
   textoSegmentTodasActivo: {
-    color: '#111827',
+    color: '#0F172A',
     fontWeight: '600',
   },
   segmentItemCriticoActivo: {
-    backgroundColor: '#FFEDD5',
+    backgroundColor: '#FEF3C7',
   },
   textoSegmentCriticoActivo: {
-    color: '#EA580C',
+    color: '#D97706',
     fontWeight: '600',
   },
   segmentItemSinStockActivo: {
@@ -431,7 +511,7 @@ const styles = StyleSheet.create({
   },
   separadorFiltros: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#F1F5F9',
     marginHorizontal: 16,
     marginBottom: 8,
   },
@@ -441,44 +521,56 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chipCategoria: {
-    paddingHorizontal: 13,
+    paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
     marginRight: 6,
   },
   chipCategoriaSeleccionada: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
+    backgroundColor: '#0284C7',
+    borderColor: '#0284C7',
   },
   textoChipCategoria: {
     fontSize: 13,
-    color: '#4B5563',
+    color: '#475569',
     fontWeight: '500',
   },
   textoChipCategoriaSeleccionada: {
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  listaProductos: { padding: 12, paddingBottom: 20 },
-  filaGrid: { justifyContent: 'space-between', marginBottom: 12 },
+  listaProductos: { 
+    padding: 12, 
+    paddingBottom: 20, 
+  },
+  filaGrid: { 
+    justifyContent: 'space-between', 
+    marginBottom: 12, 
+  },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 10,
     width: '48.5%',
     justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E0F2FE',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
     elevation: 2,
   },
   imagenContenedor: {
     width: '100%',
-    height: 100,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    height: 110,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -488,23 +580,82 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  textoSinImagen: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    textAlign: 'center',
+  placeholderIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  cardContenido: { flex: 1, marginBottom: 8 },
-  cardCategoria: { fontSize: 10, color: '#8E8E93', textTransform: 'uppercase', marginBottom: 2 },
-  cardTitulo: { fontSize: 14, fontWeight: '600', color: '#1C1C1E', marginBottom: 4, lineHeight: 18 },
-  cardPrecio: { fontSize: 15, fontWeight: '600', color: '#1C1C1E' },
-  cardStockContainer: { alignItems: 'flex-start', marginTop: 'auto' },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, width: '100%', alignItems: 'center' },
-  badgeConStock: { backgroundColor: '#F3F4F6' }, // Fondo neutro suave cuando hay stock
-  badgeSinStock: { backgroundColor: '#FFEBEE' }, // Fondo rojo suave cuando no hay stock
-  badgeTexto: { fontSize: 11, fontWeight: '700' },
-  textoConStock: { color: '#4B5563' }, // Texto gris neutro oscuro para stock normal
-  textoSinStock: { color: '#D32F2F' }, // Texto rojo intenso para alertas de sin stock
-  centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginTop: 40 },
-  textoCargando: { marginTop: 10, color: '#8E8E93', fontSize: 14 },
-  textoVacio: { color: '#8E8E93', fontSize: 15, textAlign: 'center' },
+  textoSinImagen: {
+    fontSize: 11,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  cardContenido: { 
+    flex: 1, 
+    marginBottom: 8, 
+  },
+  cardCategoria: { 
+    fontSize: 10, 
+    color: '#0284C7', 
+    textTransform: 'uppercase', 
+    marginBottom: 2,
+    fontWeight: '700',
+  },
+  cardTitulo: { 
+    fontSize: 14, 
+    fontWeight: '600', 
+    color: '#0F172A', 
+    marginBottom: 4, 
+    lineHeight: 18, 
+  },
+  cardPrecio: { 
+    fontSize: 15, 
+    fontWeight: '700', 
+    color: '#0EA5E9', 
+  },
+  cardStockContainer: { 
+    alignItems: 'flex-start', 
+    marginTop: 'auto', 
+  },
+  badge: { 
+    paddingHorizontal: 8, 
+    paddingVertical: 4, 
+    borderRadius: 6, 
+    width: '100%', 
+    alignItems: 'center', 
+  },
+  badgeConStock: { 
+    backgroundColor: '#F0FDF4', 
+  },
+  badgeSinStock: { 
+    backgroundColor: '#FEF2F2', 
+  },
+  badgeTexto: { 
+    fontSize: 11, 
+    fontWeight: '700', 
+  },
+  textoConStock: { 
+    color: '#16A34A', 
+  },
+  textoSinStock: { 
+    color: '#DC2626', 
+  },
+  centrado: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    padding: 20, 
+    marginTop: 40, 
+  },
+  textoCargando: { 
+    marginTop: 10, 
+    color: '#64748B', 
+    fontSize: 14, 
+  },
+  textoVacio: { 
+    color: '#64748B', 
+    fontSize: 15, 
+    textAlign: 'center', 
+  },
 });
