@@ -208,6 +208,7 @@ export function S05_AltaEditarScreen() {
     }
   };
 
+  // NUEVO: Función para seleccionar archivo (PNG/JPG) desde la galería
   const seleccionarDeGaleria = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();

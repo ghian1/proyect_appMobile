@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { HeaderBackButton } from '../components/HeaderBackButton';
 import { S09_VentasScreen } from '../screens/S09_VentasScreen';
 import { VentasStackParamList } from '../types/navigation';
 
@@ -19,7 +20,9 @@ export default function VentasNavigator(): React.ReactNode {
         name="VentasMain"
         component={S09_VentasScreen}
         options={{
-            title: 'Caja y Mostrador',
+            title: 'Ventas',
+            //Botón de retroceso hacia la pantalla de Inicio
+            headerLeft: () => <HeaderBackButton />,
         }}
         />
     </Stack.Navigator>

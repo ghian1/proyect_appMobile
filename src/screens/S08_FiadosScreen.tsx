@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,6 +16,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { HeaderBackButton } from '../components/HeaderBackButton';
 import {
   ClienteFiado,
   crearClienteFiado,
@@ -27,6 +27,14 @@ import {
 import { sanearImporte } from '../utils/sanitizers';
 
 export default function S08_FiadosScreen(): React.ReactNode {
+  const navigation = useNavigation<any>();
+
+  //Botón de retroceso hacia la pantalla de Inicio
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => <HeaderBackButton />,
+    });
+  }, [navigation]);
   // Lista de clientes y búsqueda
   const [busqueda, setBusqueda] = useState('');
   const [clientes, setClientes] = useState<ClienteFiado[]>([]);

@@ -2,10 +2,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Pantallas que pertenecen exclusivamente al módulo de Stock
 import { StockStackParamList } from '@/types/navigation'; //importamos el contrato que hicimos en navigation.ts para tipar los parámetros de las pantallas del módulo de stock
+import { HeaderBackButton } from '../components/HeaderBackButton';
 import { S03_ProductDetailScreen } from '../screens/S03_ProductDetailScreen';
 import { S05_AltaEditarScreen } from '../screens/S05_AltaEditarScreen';
 import { S07_StockListScreen } from '../screens/S07_StockListScreen';
-
 
 //Inicializamos el Stack Navigator tipado con las rutas de Stock
 const Stack = createNativeStackNavigator<StockStackParamList>();
@@ -25,7 +25,11 @@ export default function StockNavigator() {
     <Stack.Screen 
         name="StockList" 
         component={S07_StockListScreen} 
-        options={{ title: 'Gestión de Inventario' }} 
+        options={{ 
+            title: 'Gestión de Inventario',
+            //Botón de retroceso hacia la pantalla de Inicio
+            headerLeft: () => <HeaderBackButton />,
+        }} 
     />
     <Stack.Screen 
         name="ProductDetail" 

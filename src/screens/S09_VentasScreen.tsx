@@ -19,11 +19,20 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HeaderBackButton } from '../components/HeaderBackButton';
 import { ClienteFiado, subscribeToClientesFiados } from '../services/fiadoService';
 import { CATEGORIAS_BASE, Producto, suscribirACategorias, suscribirAProductos } from '../services/productService';
 import { ItemCarrito, registrarVenta } from '../services/saleService';
 
 export function S09_VentasScreen() {
+    const navigation = useNavigation<any>();
+
+    //Botón de retroceso hacia la pantalla de Inicio
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerLeft: () => <HeaderBackButton />,
+        });
+    }, [navigation]);
     const [productos, setProductos] = useState<Producto[]>([]);
     const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE);
     const [cargando, setCargando] = useState<boolean>(true);
@@ -258,6 +267,8 @@ export function S09_VentasScreen() {
 
     const renderProductoItem = ({ item }: { item: Producto }) => {
         const sinStock = item.stock <= 0;
+        // NUEVO: Identificación de stock crítico (entre 1 y 4 unidades)
+        const esCritico = item.stock > 0 && item.stock < 5;
         const itemEnCarrito = item.id ? carrito[item.id] : undefined;
         const cantidadEnCarrito = itemEnCarrito ? itemEnCarrito.cantidad : 0;
 
@@ -293,7 +304,16 @@ export function S09_VentasScreen() {
                 </View>
 
                 <View style={styles.cardStockContainer}>
-                    <View style={[styles.badgeStock, sinStock ? styles.badgeSinStock : styles.badgeConStock]}>
+                    <View
+                        style={[
+                            styles.badgeStock,
+                            sinStock
+                                ? styles.badgeSinStock
+                                : esCritico
+                                ? styles.badgeCritico
+                                : styles.badgeConStock,
+                        ]}
+                    >
                         <Text style={[styles.textoBadgeStock, sinStock ? styles.textoSinStock : styles.textoConStock]}>
                             {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} u.`}
                         </Text>

@@ -16,6 +16,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { HeaderBackButton } from '../components/HeaderBackButton';
 import {
   confirmarCompraYSumarStock,
   guardarPlanillaBorrador,
@@ -27,6 +28,14 @@ import { Producto, suscribirAProductos } from '../services/productService';
 import { sanearEntero, sanearImporte } from '../utils/sanitizers';
 
 export default function S10_ComprasScreen(): React.ReactNode {
+  const navigation = useNavigation<any>();
+
+  //Botón de retroceso hacia la pantalla de Inicio
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => <HeaderBackButton />,
+    });
+  }, [navigation]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [cargandoProductos, setCargandoProductos] = useState(true);
