@@ -3,6 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -16,6 +18,7 @@ import {
   abrirCaja,
   cerrarCaja,
   EstadoCaja,
+  obtenerHistorialCajas, 
   suscribirAEstadoCaja,
 } from '../services/cajaService';
 import { ClienteFiado, subscribeToClientesFiados } from '../services/fiadoService';
@@ -64,6 +67,11 @@ export function S11_MetricasScreen(): React.ReactNode {
   const [procesandoCaja, setProcesandoCaja] = useState<boolean>(false);
   const [refrescando, setRefrescando] = useState<boolean>(false);
 
+  // Estados para el Modal de Historial de Cierres de Caja
+  const [modalHistorialVisible, setModalHistorialVisible] = useState<boolean>(false);
+  const [historialCajas, setHistorialCajas] = useState<any[]>([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState<boolean>(false);
+
   // Suscripción en tiempo real a las ventas de Firestore
   useEffect(() => {
     const desuscribirVentas = suscribirAVentas(
@@ -105,7 +113,28 @@ export function S11_MetricasScreen(): React.ReactNode {
     };
   }, []);
 
-  // Filtrado de las ventas del turno de caja actual (inicia en $0 al abrir nueva caja)
+  // Abrir y cargar historial de cajas cerradas
+  const abrirHistorialCajas = async () => {
+    setModalHistorialVisible(true);
+    setCargandoHistorial(true);
+    try {
+      // Si tu servicio tiene una función para obtener el historial, la llamamos acá.
+      // Si no la creaste aún, asegurate de tenerla en cajaService.ts
+      if (typeof obtenerHistorialCajas === 'function') {
+        const data = await obtenerHistorialCajas();
+        setHistorialCajas(data || []);
+      } else {
+        setHistorialCajas([]);
+      }
+    } catch (error) {
+      console.error('Error al cargar historial de cajas:', error);
+      Alert.alert('Error', 'No se pudo cargar el historial de cierres de caja.');
+    } finally {
+      setCargandoHistorial(false);
+    }
+  };
+
+  // Filtrado de las ventas del turno de caja actual
   const ventasTurnoActual = useMemo(() => {
     if (estadoCaja.estado === 'cerrada') {
       return [];
@@ -140,15 +169,12 @@ export function S11_MetricasScreen(): React.ReactNode {
     return (ventasTurnoActual || []).reduce((acc, v) => acc + (Number(v?.total) || 0), 0);
   }, [ventasTurnoActual]);
 
-  // Cantidad de ventas realizadas en el turno actual
   const cantidadVentasHoy = ventasTurnoActual.length;
 
-  // Ticket promedio del turno actual
   const ticketPromedio = useMemo(() => {
     return cantidadVentasHoy > 0 ? totalFacturadoHoy / cantidadVentasHoy : 0;
   }, [totalFacturadoHoy, cantidadVentasHoy]);
 
-  // Total acumulado en cuentas corrientes de fiados (global)
   const totalEnFiados = useMemo(() => {
     return (clientesFiados || []).reduce(
       (acc, c) => acc + (Number(c.deudaTotal) || 0),
@@ -156,12 +182,10 @@ export function S11_MetricasScreen(): React.ReactNode {
     );
   }, [clientesFiados]);
 
-  // Cantidad de clientes con saldo deudor pendiente
   const clientesConSaldo = useMemo(() => {
     return (clientesFiados || []).filter((c) => (Number(c.deudaTotal) || 0) > 0).length;
   }, [clientesFiados]);
 
-  // Desglose por método de pago del turno actual
   const desgloseMetodos = useMemo(() => {
     let efectivo = 0;
     let efectivoCant = 0;
@@ -212,7 +236,7 @@ export function S11_MetricasScreen(): React.ReactNode {
           totalFacturadoHoy
         )}\n• Ventas: ${cantidadVentasHoy} operaciones\n• En Efectivo: ${formatearMoneda(
           desgloseMetodos.efectivo.monto
-        )}\n\nAl confirmar, la recaudación del turno se cerrará y pasará a $0,00 para el próximo turno.`,
+        )}\n\nAl confirmar, la recaudación del turno se cerrará, se guardará en el historial y pasará a $0,00.`,
         [
           { text: 'Cancelar', style: 'cancel' },
           {
@@ -228,7 +252,7 @@ export function S11_MetricasScreen(): React.ReactNode {
                 });
                 Alert.alert(
                   '¡Caja Cerrada!',
-                  'El cierre quedó registrado en el sistema. La recaudación se ha reiniciado a $0,00.'
+                  'El cierre quedó registrado en el historial y la recaudación se reinició a $0,00.'
                 );
               } catch (error) {
                 console.error('Error al cerrar caja:', error);
@@ -271,33 +295,44 @@ export function S11_MetricasScreen(): React.ReactNode {
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
-      {/* Header moderno */}
+      {/* Header moderno con Botón de Historial */}
       <View style={styles.header}>
         <View style={styles.headerTextoContainer}>
           <Text style={styles.tituloHeader}>Métricas y Caja</Text>
           <Text style={styles.fechaHeader}>{formatearFechaHoy()}</Text>
         </View>
 
-        <View
-          style={[
-            styles.badgeEstado,
-            cajaAbierta ? styles.badgeAbierta : styles.badgeCerrada,
-          ]}
-        >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            style={styles.btnHistorialHeader}
+            onPress={abrirHistorialCajas}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="time-outline" size={16} color="#FFFFFF" style={{ marginRight: 4 }} />
+            <Text style={styles.textoBtnHistorial}>Historial</Text>
+          </TouchableOpacity>
+
           <View
             style={[
-              styles.puntoEstado,
-              cajaAbierta ? styles.puntoVerde : styles.puntoRojo,
-            ]}
-          />
-          <Text
-            style={[
-              styles.textoBadgeEstado,
-              cajaAbierta ? styles.textoVerde : styles.textoRojo,
+              styles.badgeEstado,
+              cajaAbierta ? styles.badgeAbierta : styles.badgeCerrada,
             ]}
           >
-            {cajaAbierta ? 'Abierta' : 'Cerrada'}
-          </Text>
+            <View
+              style={[
+                styles.puntoEstado,
+                cajaAbierta ? styles.puntoVerde : styles.puntoRojo,
+              ]}
+            />
+            <Text
+              style={[
+                styles.textoBadgeEstado,
+                cajaAbierta ? styles.textoVerde : styles.textoRojo,
+              ]}
+            >
+              {cajaAbierta ? 'Abierta' : 'Cerrada'}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -340,7 +375,6 @@ export function S11_MetricasScreen(): React.ReactNode {
 
           {/* Grilla con Card 2 y Card 3 */}
           <View style={styles.filaDosColumnas}>
-            {/* Card 2: Cantidad de Ventas */}
             <View style={[styles.card, styles.columna]}>
               <View style={styles.cardHeaderFila}>
                 <Text style={styles.cardEtiquetaMini}>VENTAS DEL TURNO</Text>
@@ -358,7 +392,6 @@ export function S11_MetricasScreen(): React.ReactNode {
               </Text>
             </View>
 
-            {/* Card 3: Total en Fiados */}
             <View style={[styles.card, styles.columna]}>
               <View style={styles.cardHeaderFila}>
                 <Text style={styles.cardEtiquetaMini}>EN FIADOS</Text>
@@ -597,6 +630,63 @@ export function S11_MetricasScreen(): React.ReactNode {
           </View>
         </ScrollView>
       )}
+
+      {/* MODAL: HISTORIAL DE CIERRES DE CAJA */}
+      <Modal visible={modalHistorialVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <Text style={styles.modalTitle}>Historial de Cierres de Caja</Text>
+            <Text style={styles.modalSub}>Registro histórico de recaudación por turno o día</Text>
+
+            {cargandoHistorial ? (
+              <ActivityIndicator size="large" color="#0284C7" style={{ marginVertical: 30 }} />
+            ) : (
+              <FlatList
+                data={historialCajas}
+                keyExtractor={(item) => item.id || Math.random().toString()}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => {
+                  const fechaFormat = item.fechaCierre
+                    ? new Date(
+                        item.fechaCierre.toDate
+                          ? item.fechaCierre.toDate()
+                          : item.fechaCierre.seconds * 1000
+                      ).toLocaleString('es-AR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })
+                    : 'Fecha N/A';
+
+                  return (
+                    <View style={styles.cardHistorial}>
+                      <View>
+                        <Text style={styles.fechaHistorial}>Cierre - {fechaFormat}</Text>
+                        <Text style={styles.itemsHistorialCount}>
+                          {item.cantidadVentas || 0} operaciones registradas
+                        </Text>
+                      </View>
+                      <Text style={styles.totalHistorial}>
+                        ${(item.totalFacturado || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </Text>
+                    </View>
+                  );
+                }}
+                ListEmptyComponent={
+                  <Text style={styles.textoVacio}>No hay cierres de caja archivados aún.</Text>
+                }
+              />
+            )}
+
+            <TouchableOpacity
+              style={[styles.botonCerrarModal, { marginTop: 16, alignItems: 'center' }]}
+              onPress={() => setModalHistorialVisible(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.textoBotonCerrarModal}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -631,11 +721,25 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '500',
   },
+  btnHistorialHeader: {
+    backgroundColor: '#0284C7',
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textoBtnHistorial: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 13,
+  },
   badgeEstado: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 20,
     borderWidth: 1,
   },
@@ -648,10 +752,10 @@ const styles = StyleSheet.create({
     borderColor: '#FECACA',
   },
   puntoEstado: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginRight: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 4,
   },
   puntoVerde: {
     backgroundColor: '#16A34A',
@@ -660,7 +764,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#DC2626',
   },
   textoBadgeEstado: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   textoVerde: {
@@ -907,5 +1011,71 @@ const styles = StyleSheet.create({
   },
   textoBtnAbrir: {
     color: '#FFFFFF',
+  },
+  // Modal Historial
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E0F2FE',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0F172A',
+  },
+  modalSub: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 16,
+  },
+  cardHistorial: {
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  fechaHistorial: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0F172A',
+  },
+  itemsHistorialCount: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  totalHistorial: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0284C7',
+  },
+  textoVacio: {
+    textAlign: 'center',
+    color: '#64748B',
+    fontSize: 14,
+    marginVertical: 20,
+  },
+  botonCerrarModal: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+  },
+  textoBotonCerrarModal: {
+    color: '#334155',
+    fontWeight: '600',
   },
 });

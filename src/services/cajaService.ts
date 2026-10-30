@@ -2,7 +2,10 @@ import {
   addDoc,
   collection,
   doc,
+  getDocs,
   onSnapshot,
+  orderBy,
+  query,
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
@@ -85,5 +88,27 @@ export const cerrarCaja = async (resumen?: {
     });
   } catch (error) {
     console.warn('No se pudo guardar el registro en historial de cierres:', error);
+  }
+};
+
+// [NUEVA FUNCIÓN] Obtener el historial de cierres de caja ordenados por fecha más reciente
+export const obtenerHistorialCajas = async (): Promise<any[]> => {
+  try {
+    const q = query(
+      collection(db, COLECCION_HISTORIAL_CIERRES),
+      orderBy('fechaRegistro', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    const historial: any[] = [];
+    querySnapshot.forEach((docSnap) => {
+      historial.push({
+        id: docSnap.id,
+        ...docSnap.data(),
+      });
+    });
+    return historial;
+  } catch (error) {
+    console.error('Error al obtener el historial de cajas:', error);
+    throw error;
   }
 };

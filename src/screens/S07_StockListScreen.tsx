@@ -28,7 +28,6 @@ import { StockStackParamList } from '../types/navigation';
 
 type StockNavProp = NativeStackNavigationProp<StockStackParamList>;
 
-// Estados de stock limpios: 'Todas', 'Stock Crítico' y 'Sin Stock'
 type EstadoStock = 'Todas' | 'Stock Crítico' | 'Sin Stock';
 
 export function S07_StockListScreen() {
@@ -40,7 +39,6 @@ export function S07_StockListScreen() {
   const [estadoStockSeleccionado, setEstadoStockSeleccionado] = useState<EstadoStock>('Todas');
   const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<string[]>([]);
 
-  // Botón de retroceso hacia la pantalla de Inicio
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => <HeaderBackButton />,
@@ -59,27 +57,29 @@ export function S07_StockListScreen() {
     );
   };
 
+  // Manejador del borrado lógico de categoría al mantener presionado
   const handleLongPressCategoria = (cat: string) => {
-    if (cat === 'Todas' || cat === 'Almacén') {
-      Alert.alert('Aviso', `La categoría "${cat}" no se puede eliminar por seguridad.`);
+    if (CATEGORIAS_BASE.includes(cat)) {
+      Alert.alert('Aviso', `La categoría "${cat}" es de sistema y no se puede eliminar.`);
       return;
     }
 
     Alert.alert(
-      'Eliminar Categoría',
-      `¿Estás seguro de que querés borrar la categoría "${cat}"? Se quitará de todos los productos que la tengan asignada.`,
+      'Desactivar Categoría',
+      `¿Estás seguro de que querés desactivar la categoría "${cat}"? Se ocultará de los filtros y se limpiará de los productos asociados.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: 'Desactivar',
           style: 'destructive',
           onPress: async () => {
             try {
               await eliminarCategoriaBD(cat);
               setCategoriasSeleccionadas((prev) => (prev || []).filter((c) => c !== cat));
-              Alert.alert('Éxito', `La categoría "${cat}" fue eliminada correctamente.`);
+              Alert.alert('Éxito', `La categoría "${cat}" fue desactivada correctamente.`);
             } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar la categoría.');
+              console.error(error);
+              Alert.alert('Error', 'No se pudo desactivar la categoría.');
             }
           },
         },
@@ -157,7 +157,6 @@ export function S07_StockListScreen() {
 
   const renderProducto = ({ item }: { item: Producto }) => {
     const sinStock = item.stock <= 0;
-    // Validación de stock crítico (entre 1 y 4 unidades)
     const esCritico = item.stock > 0 && item.stock < 5;
 
     return (
@@ -408,7 +407,7 @@ export function S07_StockListScreen() {
 const styles = StyleSheet.create({
   contenedor: { 
     flex: 1, 
-    backgroundColor: '#F0F9FF', // Fondo celeste sutil general
+    backgroundColor: '#F0F9FF',
   },
   header: {
     flexDirection: 'row',
@@ -634,7 +633,7 @@ const styles = StyleSheet.create({
     marginTop: 'auto', 
   },
   badge: { 
-    paddingHorizontal: 8, 
+    paddingHorizontal: 10, 
     paddingVertical: 4, 
     borderRadius: 6, 
     width: '100%', 
@@ -642,12 +641,18 @@ const styles = StyleSheet.create({
   },
   badgeConStock: { 
     backgroundColor: '#F0FDF4', 
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
   },
   badgeCritico: {
     backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
   },
   badgeSinStock: { 
     backgroundColor: '#FEF2F2', 
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
   badgeTexto: { 
     fontSize: 11, 
