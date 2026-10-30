@@ -61,7 +61,7 @@ export function S05_AltaEditarScreen() {
   // Suscripción a categorías de Firestore
   useEffect(() => {
     const desuscribirCats = suscribirACategorias((cats: string[]) => {
-      const categoriasValidasParaElegir = cats.filter(
+      const categoriasValidasParaElegir = (cats || []).filter(
         (c: string) => c !== 'Todas' && c !== 'Stock Crítico' && c !== 'Sin Stock'
       );
       setListaCategorias(categoriasValidasParaElegir);
@@ -122,7 +122,7 @@ export function S05_AltaEditarScreen() {
   const toggleCategoria = (cat: string) => {
     if (categorias.includes(cat)) {
       if (categorias.length > 1) {
-        setCategorias(categorias.filter((item) => item !== cat));
+        setCategorias((categorias || []).filter((item) => item !== cat));
       } else {
         Alert.alert('Validación', 'El producto debe pertenecer al menos a una categoría.');
       }
@@ -148,7 +148,7 @@ export function S05_AltaEditarScreen() {
           onPress: async () => {
             try {
               await eliminarCategoriaBD(cat);
-              setCategorias((prev) => prev.filter((c) => c !== cat));
+              setCategorias((prev) => (prev || []).filter((c) => c !== cat));
               Alert.alert('Éxito', `La categoría "${cat}" fue eliminada correctamente.`);
             } catch (error) {
               Alert.alert('Error', 'No se pudo eliminar la categoría.');
@@ -367,8 +367,8 @@ export function S05_AltaEditarScreen() {
             <View style={styles.campo}>
               <Text style={styles.label}>Categorías (podés elegir varias)</Text>
               <View style={styles.categoriasContenedor}>
-                {listaCategorias.map((cat) => {
-                  const seleccionada = categorias.includes(cat);
+                {(listaCategorias || []).map((cat) => {
+                  const seleccionada = (categorias || []).includes(cat);
                   return (
                     <TouchableOpacity
                       key={cat}

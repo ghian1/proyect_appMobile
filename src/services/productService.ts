@@ -15,26 +15,24 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-//Nombre de la colección en Firestore donde se almacenan los productos
+// Nombre de la colección en Firestore donde se almacenan los productos
 const COLECCION_PRODUCTOS = "productos";
 
-//Contrato de un producto, que define las propiedades que debe tener un producto en la base de datos.
+// Contrato de un producto, que define las propiedades que debe tener un producto en la base de datos.
 export interface Producto {
   id?: string;
   nombre: string;
-  categorias?: string[]; //Lo hice un array de strings para permitir múltiples categorías por producto. 
-  categoria?: string; //La categoría principal del producto, que puede ser una cadena de texto o undefined si no se especifica
+  categorias?: string[]; // Lo hice un array de strings para permitir múltiples categorías por producto. 
+  categoria?: string; // La categoría principal del producto, que puede ser una cadena de texto o undefined si no se especifica
   precio: number;
   precioCosto?: number; // Precio directo del proveedor, no al que se vende.
   stock: number;
   descripcion?: string;
   createdAt?: FieldValue | Date;
-  imagenUrl?: string | null; //Contrato para la URL de la imagen del producto, que puede ser una cadena de texto o null si no hay imagen
+  imagenUrl?: string | null; // Contrato para la URL de la imagen del producto, que puede ser una cadena de texto o null si no hay imagen
 }
 
 export type NuevoProductoInput = Omit<Producto, "id" | "creadoEn" | "actualizadoEn">;
-
-
 
 // 1. Escuchar la lista completa de productos en tiempo real (S02 y S07)
 export function suscribirAProductos(
@@ -50,11 +48,11 @@ export function suscribirAProductos(
   return onSnapshot(
     q,
     (snapshot) => {
-      const lista: Producto[] = snapshot.docs.map((docSnap) => ({
+      const lista: Producto[] = (snapshot?.docs || []).map((docSnap) => ({
         id: docSnap.id,
         ...(docSnap.data() as Omit<Producto, "id">),
       }));
-      onData(lista);
+      onData(lista || []);
     },
     (error) => {
       console.error("Error en listener de productos:", error);
@@ -63,8 +61,7 @@ export function suscribirAProductos(
   );
 }
 
-//funcion para obtener un producto por su ID. Lo usamos para el UseEfect de recuperar los datos del producto(AltaEditarScreen).
-//getdoc es una funcion de firebase que nos permite obtener un documento de la base de datos a partir de su referencia.
+// Función para obtener un producto por su ID. Lo usamos para el useEffect de recuperar los datos del producto(AltaEditarScreen).
 export async function obtenerProductoPorId(idProducto: string): Promise<Producto | null> {
   if (!idProducto) throw new Error("Se requiere el ID del producto.");
   const docRef = doc(db, COLECCION_PRODUCTOS, idProducto);
@@ -83,8 +80,6 @@ export async function obtenerProductoPorId(idProducto: string): Promise<Producto
 // 2. Crear un nuevo producto (S05)
 export async function crearProducto(datos: NuevoProductoInput): Promise<string> {
   // Validación defensiva en capa de servicio
-
-  //Le agregamos manejo de errores que no habia. 
   if (!datos.nombre || datos.nombre.trim().length < 2) { 
     throw new Error("El nombre del producto debe contener al menos 2 caracteres.");
   }
@@ -95,8 +90,6 @@ export async function crearProducto(datos: NuevoProductoInput): Promise<string> 
     throw new Error("El stock no puede ser negativo (Invariante I-04).");
   }
 
-
-
   // Normalizamos: si viene el array de categorías lo usamos, si viene una sola la metemos en array
   const categoriasFinales = datos.categorias && datos.categorias.length > 0 
     ? datos.categorias 
@@ -104,7 +97,6 @@ export async function crearProducto(datos: NuevoProductoInput): Promise<string> 
 
   const payload = {
     nombre: datos.nombre.trim(),
-    //Guardamos el arreglo completo y el primer elemento como fallback
     categorias: categoriasFinales,
     categoria: categoriasFinales[0],
     precio: Number(datos.precio),
@@ -137,7 +129,7 @@ export async function actualizarProducto(
     payload.nombre = cambios.nombre.trim();
   }
 
-  //Si vienen categorías nuevas, las asignamos al payload
+  // Si vienen categorías nuevas, las asignamos al payload
   if (cambios.categorias && cambios.categorias.length > 0) {
     payload.categorias = cambios.categorias;
     payload.categoria = cambios.categorias[0];
@@ -146,7 +138,50 @@ export async function actualizarProducto(
   await updateDoc(docRef, payload);
 }
 
-// 4. Eliminar una categoría de la base de datos y limpiarla de los productos asociados
+// 4. Categorías por defecto para la barra de filtros superiores
+export const CATEGORIAS_BASE: string[] = [
+  'Todas',
+  'Stock Crítico',
+  'Sin Stock',
+  'Comestibles',
+  'Bebidas',
+  'Limpieza',
+  'Almacén',
+];
+
+// 5. Suscripción en tiempo real a la colección de categorías en Firestore
+export const suscribirACategorias = (
+  onUpdate: (categorias: string[]) => void,
+  onError?: (error: Error) => void
+) => {
+  const ref = collection(db, 'categorias');
+  return onSnapshot(
+    query(ref),
+    (snapshot) => {
+      const catsGuardadas = (snapshot?.docs || [])
+        .map((docSnap) => docSnap?.data()?.nombre as string)
+        .filter(Boolean);
+      const listaUnificada = Array.from(new Set([...CATEGORIAS_BASE, ...catsGuardadas]));
+      onUpdate(listaUnificada || []);
+    },
+    (error) => {
+      console.error("Error en listener de categorías:", error);
+      if (onError) onError(error);
+    }
+  );
+};
+
+// 6. Guardar una categoría nueva creada por el comerciante en Firestore
+export const crearCategoriaBD = async (nombre: string): Promise<void> => {
+  if (!nombre || !nombre.trim()) return;
+  const ref = collection(db, 'categorias');
+  await addDoc(ref, { 
+    nombre: nombre.trim(),
+    creadoEn: serverTimestamp() 
+  });
+};
+
+// 7. Eliminar una categoría de la base de datos y limpiarla de los productos asociados
 export async function eliminarCategoriaBD(nombreCategoria: string): Promise<void> {
   if (!nombreCategoria) throw new Error("Se requiere el nombre de la categoría.");
 
@@ -160,13 +195,13 @@ export async function eliminarCategoriaBD(nombreCategoria: string): Promise<void
   const productosRef = collection(db, COLECCION_PRODUCTOS);
   const snapshot = await getDocs(productosRef);
 
-  snapshot.forEach((docSnap) => {
-    const data = docSnap.data();
+  (snapshot?.docs || []).forEach((docSnap) => {
+    const data = docSnap.data() || {};
     const categoriasArray: string[] = data.categorias || [];
     const categoriaPrincipal: string = data.categoria || '';
 
     if (categoriasArray.includes(nombreCategoria) || categoriaPrincipal === nombreCategoria) {
-      const nuevasCategorias = categoriasArray.filter((c) => c !== nombreCategoria);
+      const nuevasCategorias = (categoriasArray || []).filter((c) => c !== nombreCategoria);
       const nuevaPrincipal =
         categoriaPrincipal === nombreCategoria
           ? nuevasCategorias[0] || 'Almacén'

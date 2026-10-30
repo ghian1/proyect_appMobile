@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
   Alert,
@@ -8,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -64,7 +65,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
   useEffect(() => {
     const unsubscribe = suscribirAProductos(
       (data) => {
-        setProductos(data);
+        setProductos(data || []);
         setCargandoProductos(false);
       },
       (error) => {
@@ -74,7 +75,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
     );
 
     obtenerPlanillaBorrador().then((borrador) => {
-      if (borrador && borrador.items) {
+      if (borrador && Array.isArray(borrador.items)) {
         setPlanillaItems(borrador.items);
       }
     });
@@ -82,11 +83,11 @@ export default function S10_ComprasScreen(): React.ReactNode {
     return () => unsubscribe();
   }, []);
 
-  const productosFiltrados = productos.filter((p) =>
-    p.nombre ? p.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()) : false
+  const productosFiltrados = (productos || []).filter((p) =>
+    p?.nombre ? p.nombre.toLowerCase().includes((busqueda || '').trim().toLowerCase()) : false
   );
 
-  const totalCalculado = planillaItems.reduce((acc, item) => acc + item.subtotal, 0);
+  const totalCalculado = (planillaItems || []).reduce((acc, item) => acc + (Number(item?.subtotal) || 0), 0);
 
   // Abrir y cargar historial de compras
   const abrirHistorial = async () => {
@@ -94,7 +95,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
     setCargandoHistorial(true);
     try {
       const data = await obtenerHistorialCompras();
-      setHistorialCompras(data);
+      setHistorialCompras(data || []);
     } catch (error) {
       Alert.alert('Error', 'No se pudo cargar el historial de compras.');
     } finally {
@@ -168,15 +169,15 @@ export default function S10_ComprasScreen(): React.ReactNode {
     setBusqueda('');
     setModalVisible(false);
 
-    const nuevoTotal = nuevosItems.reduce((acc, item) => acc + item.subtotal, 0);
+    const nuevoTotal = (nuevosItems || []).reduce((acc, item) => acc + (Number(item?.subtotal) || 0), 0);
     await guardarPlanillaBorrador(nuevosItems, nuevoTotal);
   };
 
   // 5. Quitar un producto de la planilla
   const handleQuitarItem = async (productId: string) => {
-    const nuevosItems = planillaItems.filter((item) => item.productId !== productId);
+    const nuevosItems = (planillaItems || []).filter((item) => item.productId !== productId);
     setPlanillaItems(nuevosItems);
-    const nuevoTotal = nuevosItems.reduce((acc, item) => acc + item.subtotal, 0);
+    const nuevoTotal = (nuevosItems || []).reduce((acc, item) => acc + (Number(item?.subtotal) || 0), 0);
     await guardarPlanillaBorrador(nuevosItems, nuevoTotal);
   };
 
@@ -274,7 +275,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
           ) : busqueda.trim().length > 0 ? (
             <View style={styles.resultadosContenedor}>
               <FlatList
-                data={productosFiltrados}
+                data={productosFiltrados || []}
                 keyExtractor={(item) => item.id || Math.random().toString()}
                 keyboardShouldPersistTaps="handled"
                 style={{ maxHeight: 180 }}
@@ -304,7 +305,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
           </View>
 
           <FlatList
-            data={planillaItems}
+            data={planillaItems || []}
             keyExtractor={(item) => item.productId}
             contentContainerStyle={styles.listaPlanilla}
             keyboardShouldPersistTaps="handled"
@@ -505,7 +506,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
               <ActivityIndicator size="large" color="#0284C7" style={{ marginVertical: 30 }} />
             ) : (
               <FlatList
-                data={historialCompras}
+                data={historialCompras || []}
                 keyExtractor={(item) => item.id || Math.random().toString()}
                 showsVerticalScrollIndicator={false}
                 renderItem={({ item }) => {

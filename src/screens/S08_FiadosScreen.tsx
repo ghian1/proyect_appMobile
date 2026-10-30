@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
   Alert,
@@ -7,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -57,14 +59,14 @@ export default function S08_FiadosScreen(): React.ReactNode {
 
   useEffect(() => {
     const unsubscribe = subscribeToClientesFiados((data) => {
-      setClientes(data);
+      setClientes(data || []);
       setCargando(false);
     });
     return () => unsubscribe();
   }, []);
 
-  const clientesFiltrados = clientes.filter((c) =>
-    c.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  const clientesFiltrados = (clientes || []).filter((c) =>
+    (c?.nombre || '').toLowerCase().includes((busqueda || '').toLowerCase())
   );
 
   // Confirmación y eliminación de cliente
@@ -273,7 +275,7 @@ export default function S08_FiadosScreen(): React.ReactNode {
             </View>
           ) : (
             <FlatList
-              data={clientesFiltrados}
+              data={clientesFiltrados || []}
               keyExtractor={(item) => item.id || Math.random().toString()}
               renderItem={renderItem}
               contentContainerStyle={styles.lista}

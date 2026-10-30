@@ -28,19 +28,19 @@ import { StockStackParamList } from '../types/navigation';
 
 type StockNavProp = NativeStackNavigationProp<StockStackParamList>;
 
-// NUEVO: Estados de stock limpios: 'Todas', 'Stock Crítico' y 'Sin Stock'
+// Estados de stock limpios: 'Todas', 'Stock Crítico' y 'Sin Stock'
 type EstadoStock = 'Todas' | 'Stock Crítico' | 'Sin Stock';
 
 export function S07_StockListScreen() {
   const navigation = useNavigation<StockNavProp>();
   const [productos, setProductos] = useState<Producto[]>([]);
-  const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE);
+  const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE || []);
   const [cargando, setCargando] = useState<boolean>(true);
   const [busqueda, setBusqueda] = useState<string>('');
   const [estadoStockSeleccionado, setEstadoStockSeleccionado] = useState<EstadoStock>('Todas');
   const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<string[]>([]);
 
-  //Botón de retroceso hacia la pantalla de Inicio
+  // Botón de retroceso hacia la pantalla de Inicio
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => <HeaderBackButton />,
@@ -48,14 +48,14 @@ export function S07_StockListScreen() {
   }, [navigation]);
 
   const categoriasRubros = useMemo(() => {
-    return categoriasBarra.filter(
+    return (categoriasBarra || []).filter(
       (c) => c !== 'Todas' && c !== 'Stock Crítico' && c !== 'Sin Stock'
     );
   }, [categoriasBarra]);
 
   const toggleCategoria = (cat: string) => {
     setCategoriasSeleccionadas((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+      (prev || []).includes(cat) ? prev.filter((c) => c !== cat) : [...(prev || []), cat]
     );
   };
 
@@ -76,7 +76,7 @@ export function S07_StockListScreen() {
           onPress: async () => {
             try {
               await eliminarCategoriaBD(cat);
-              setCategoriasSeleccionadas((prev) => prev.filter((c) => c !== cat));
+              setCategoriasSeleccionadas((prev) => (prev || []).filter((c) => c !== cat));
               Alert.alert('Éxito', `La categoría "${cat}" fue eliminada correctamente.`);
             } catch (error) {
               Alert.alert('Error', 'No se pudo eliminar la categoría.');
@@ -90,7 +90,7 @@ export function S07_StockListScreen() {
   useEffect(() => {
     const desuscribir = suscribirAProductos(
       (datos: Producto[]) => {
-        setProductos(datos);
+        setProductos(datos || []);
         setCargando(false);
       },
       (error: Error) => {
@@ -106,7 +106,7 @@ export function S07_StockListScreen() {
 
   useEffect(() => {
     const desuscribirCats = suscribirACategorias((cats: string[]) => {
-      setCategoriasBarra(cats);
+      setCategoriasBarra(cats || []);
     });
 
     return () => {
@@ -115,10 +115,10 @@ export function S07_StockListScreen() {
   }, []);
 
   const productosFiltrados = useMemo(() => {
-    const filtrados = productos.filter((item) => {
-      const coincideNombre = item.nombre
+    const filtrados = (productos || []).filter((item) => {
+      const coincideNombre = (item?.nombre || '')
         .toLowerCase()
-        .includes(busqueda.toLowerCase().trim());
+        .includes((busqueda || '').toLowerCase().trim());
 
       let coincideStock = true;
       if (estadoStockSeleccionado === 'Stock Crítico') {
@@ -151,13 +151,13 @@ export function S07_StockListScreen() {
         return tieneStockB - tieneStockA;
       }
 
-      return a.nombre.localeCompare(b.nombre);
+      return (a?.nombre || '').localeCompare(b?.nombre || '');
     });
   }, [productos, busqueda, estadoStockSeleccionado, categoriasSeleccionadas]);
 
   const renderProducto = ({ item }: { item: Producto }) => {
     const sinStock = item.stock <= 0;
-    //Validación de stock crítico (entre 1 y 4 unidades)
+    // Validación de stock crítico (entre 1 y 4 unidades)
     const esCritico = item.stock > 0 && item.stock < 5;
 
     return (
@@ -213,7 +213,7 @@ export function S07_StockListScreen() {
             <Text
               style={[
                 styles.badgeTexto,
-                sinStock ? styles.textoSinStock : styles.textoConStock,
+                sinStock ? styles.textoSinStock : esCritico ? styles.textoStockCritico : styles.textoConStock,
               ]}
             >
               {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} unidades.`}
@@ -336,7 +336,7 @@ export function S07_StockListScreen() {
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={['Todas', ...categoriasRubros]}
+          data={['Todas', ...(categoriasRubros || [])]}
           keyExtractor={(cat) => cat}
           contentContainerStyle={styles.listaCategorias}
           renderItem={({ item: cat }) => {
@@ -643,6 +643,9 @@ const styles = StyleSheet.create({
   badgeConStock: { 
     backgroundColor: '#F0FDF4', 
   },
+  badgeCritico: {
+    backgroundColor: '#FEF3C7',
+  },
   badgeSinStock: { 
     backgroundColor: '#FEF2F2', 
   },
@@ -650,8 +653,11 @@ const styles = StyleSheet.create({
     fontSize: 11, 
     fontWeight: '700', 
   },
-  textoConStock: { 
-    color: '#16A34A', 
+  textoConStock: {
+    color: '#16A34A',
+  },
+  textoStockCritico: {
+    color: '#D97706',
   },
   textoSinStock: { 
     color: '#DC2626', 
@@ -673,18 +679,4 @@ const styles = StyleSheet.create({
     fontSize: 15, 
     textAlign: 'center', 
   },
-  cardContenido: { flex: 1, marginBottom: 8 },
-  cardCategoria: { fontSize: 10, color: '#8E8E93', textTransform: 'uppercase', marginBottom: 2 },
-  cardTitulo: { fontSize: 14, fontWeight: '600', color: '#1C1C1E', marginBottom: 4, lineHeight: 18 },
-  cardPrecio: { fontSize: 15, fontWeight: '600', color: '#1C1C1E' },
-  cardStockContainer: { alignItems: 'flex-start', marginTop: 'auto' },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, width: '100%', alignItems: 'center' },
-  badgeConStock: { backgroundColor: '#F3F4F6' }, // Fondo neutro suave cuando hay stock
-  badgeSinStock: { backgroundColor: '#FFEBEE' }, // Fondo rojo suave cuando no hay stock
-  badgeTexto: { fontSize: 11, fontWeight: '700' },
-  textoConStock: { color: '#4B5563' }, // Texto gris neutro oscuro para stock normal
-  textoSinStock: { color: '#D32F2F' }, // Texto rojo intenso para alertas de sin stock
-  centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginTop: 40 },
-  textoCargando: { marginTop: 10, color: '#8E8E93', fontSize: 14 },
-  textoVacio: { color: '#8E8E93', fontSize: 15, textAlign: 'center' },
 });

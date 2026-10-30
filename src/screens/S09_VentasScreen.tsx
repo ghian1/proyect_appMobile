@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -34,21 +35,21 @@ export function S09_VentasScreen() {
         });
     }, [navigation]);
     const [productos, setProductos] = useState<Producto[]>([]);
-    const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE);
+    const [categoriasBarra, setCategoriasBarra] = useState<string[]>(CATEGORIAS_BASE || []);
     const [cargando, setCargando] = useState<boolean>(true);
     const [busqueda, setBusqueda] = useState<string>('');
     const [estadoStockSeleccionado, setEstadoStockSeleccionado] = useState<'Todas' | 'Stock Crítico' | 'Sin Stock'>('Todas');
     const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<string[]>([]);
 
     const categoriasRubros = useMemo(() => {
-        return categoriasBarra.filter(
+        return (categoriasBarra || []).filter(
             (c) => c !== 'Todas' && c !== 'Stock Crítico' && c !== 'Sin Stock'
         );
     }, [categoriasBarra]);
 
     const toggleCategoria = (cat: string) => {
         setCategoriasSeleccionadas((prev) =>
-            prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+            (prev || []).includes(cat) ? prev.filter((c) => c !== cat) : [...(prev || []), cat]
         );
     };
 
@@ -66,7 +67,7 @@ export function S09_VentasScreen() {
     useEffect(() => {
         const desuscribir = suscribirAProductos(
             (datos: Producto[]) => {
-                setProductos(datos);
+                setProductos(datos || []);
                 setCargando(false);
             },
             (error: Error) => {
@@ -81,8 +82,8 @@ export function S09_VentasScreen() {
     }, []);
 
     useEffect(() => {
-        const desuscribirCats = suscribirACategorias((cats) => {
-            setCategoriasBarra(cats);
+        const desuscribirCats = suscribirACategorias((cats: string[]) => {
+            setCategoriasBarra(cats || []);
         });
 
         return () => {
@@ -91,8 +92,8 @@ export function S09_VentasScreen() {
     }, []);
 
     useEffect(() => {
-        const desuscribirClientes = subscribeToClientesFiados((clientes) => {
-            setListaClientesFiados(clientes);
+        const desuscribirClientes = subscribeToClientesFiados((clientes: ClienteFiado[]) => {
+            setListaClientesFiados(clientes || []);
         });
 
         return () => {
@@ -101,7 +102,7 @@ export function S09_VentasScreen() {
     }, []);
 
     const productosFiltrados = useMemo(() => {
-        const filtrados = productos.filter((item) => {
+        const filtrados = (productos || []).filter((item) => {
             const coincideNombre = item.nombre
                 .toLowerCase()
                 .includes(busqueda.toLowerCase().trim());
@@ -142,8 +143,9 @@ export function S09_VentasScreen() {
     }, [productos, busqueda, estadoStockSeleccionado, categoriasSeleccionadas]);
 
     const clientesFiltrados = useMemo(() => {
-        if (!busquedaCliente.trim()) return listaClientesFiados;
-        return listaClientesFiados.filter((c) =>
+        const lista = listaClientesFiados || [];
+        if (!busquedaCliente.trim()) return lista;
+        return lista.filter((c) =>
             c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase().trim())
         );
     }, [listaClientesFiados, busquedaCliente]);
@@ -314,7 +316,7 @@ export function S09_VentasScreen() {
                                 : styles.badgeConStock,
                         ]}
                     >
-                        <Text style={[styles.textoBadgeStock, sinStock ? styles.textoSinStock : styles.textoConStock]}>
+                        <Text style={[styles.textoBadgeStock, sinStock ? styles.textoSinStock : esCritico ? styles.textoStockCritico : styles.textoConStock]}>
                             {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} u.`}
                         </Text>
                     </View>
@@ -454,7 +456,7 @@ export function S09_VentasScreen() {
                 <FlatList
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    data={['Todas', ...categoriasRubros]}
+                    data={['Todas', ...(categoriasRubros || [])]}
                     keyExtractor={(cat) => cat}
                     contentContainerStyle={styles.listaCategorias}
                     renderItem={({ item: cat }) => {
@@ -499,7 +501,7 @@ export function S09_VentasScreen() {
                 </View>
             ) : (
                 <FlatList
-                    data={productosFiltrados}
+                    data={productosFiltrados || []}
                     key="grilla_ventas_2_col"
                     numColumns={2}
                     keyExtractor={(item) => item.id || Math.random().toString()}
@@ -545,7 +547,7 @@ export function S09_VentasScreen() {
                                 <Text style={styles.modalTitulo}>Resumen de Venta</Text>
 
                                 <ScrollView style={styles.scrollModal} nestedScrollEnabled={true} showsVerticalScrollIndicator={false}>
-                                    {listaItemsCarrito.map((item) => (
+                                    {(listaItemsCarrito || []).map((item) => (
                                         <View key={item.idProducto} style={styles.filaItemCarrito}>
                                             <View style={{ flex: 1 }}>
                                                 <Text style={styles.itemNombre}>{item.nombre}</Text>
@@ -634,7 +636,7 @@ export function S09_VentasScreen() {
                                             {clientesFiltrados.length === 0 ? (
                                                 <Text style={styles.textoSinClientes}>No se encontraron clientes registrados.</Text>
                                             ) : (
-                                                clientesFiltrados.map((cliente) => {
+                                                (clientesFiltrados || []).map((cliente) => {
                                                     const seleccionado = clienteFiadoSeleccionado?.id === cliente.id;
                                                     return (
                                                         <TouchableOpacity
@@ -912,8 +914,11 @@ const styles = StyleSheet.create({
         width: '100%', 
         alignItems: 'center', 
     },
-    badgeConStock: { 
-        backgroundColor: '#F0FDF4', 
+    badgeConStock: {
+        backgroundColor: '#F0FDF4',
+    },
+    badgeCritico: {
+        backgroundColor: '#FEF3C7',
     },
     badgeSinStock: { 
         backgroundColor: '#FEF2F2', 
@@ -922,8 +927,11 @@ const styles = StyleSheet.create({
         fontSize: 11, 
         fontWeight: '700', 
     },
-    textoConStock: { 
-        color: '#16A34A', 
+    textoConStock: {
+        color: '#16A34A',
+    },
+    textoStockCritico: {
+        color: '#D97706',
     },
     textoSinStock: { 
         color: '#DC2626', 

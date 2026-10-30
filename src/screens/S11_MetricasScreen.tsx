@@ -68,7 +68,7 @@ export function S11_MetricasScreen(): React.ReactNode {
   useEffect(() => {
     const desuscribirVentas = suscribirAVentas(
       (datos) => {
-        setVentas(datos);
+        setVentas(datos || []);
         setCargandoVentas(false);
       },
       (error) => {
@@ -85,7 +85,7 @@ export function S11_MetricasScreen(): React.ReactNode {
   // Suscripción en tiempo real a clientes fiados y sus deudas
   useEffect(() => {
     const desuscribirClientes = subscribeToClientesFiados((datos) => {
-      setClientesFiados(datos);
+      setClientesFiados(datos || []);
       setCargandoClientes(false);
     });
 
@@ -97,7 +97,7 @@ export function S11_MetricasScreen(): React.ReactNode {
   // Suscripción en tiempo real al estado de la caja
   useEffect(() => {
     const desuscribirCaja = suscribirAEstadoCaja((estado) => {
-      setEstadoCaja(estado);
+      setEstadoCaja(estado || { estado: 'cerrada' });
     });
 
     return () => {
@@ -117,7 +117,7 @@ export function S11_MetricasScreen(): React.ReactNode {
       ? estadoCaja.fechaApertura.seconds * 1000
       : null;
 
-    return ventas.filter((v) => {
+    return (ventas || []).filter((v) => {
       if (!v.fecha) return false;
       const dVenta = v.fecha?.toDate
         ? v.fecha.toDate().getTime()
@@ -137,7 +137,7 @@ export function S11_MetricasScreen(): React.ReactNode {
 
   // Total facturado en el turno de caja actual
   const totalFacturadoHoy = useMemo(() => {
-    return ventasTurnoActual.reduce((acc, v) => acc + (Number(v.total) || 0), 0);
+    return (ventasTurnoActual || []).reduce((acc, v) => acc + (Number(v?.total) || 0), 0);
   }, [ventasTurnoActual]);
 
   // Cantidad de ventas realizadas en el turno actual
@@ -150,7 +150,7 @@ export function S11_MetricasScreen(): React.ReactNode {
 
   // Total acumulado en cuentas corrientes de fiados (global)
   const totalEnFiados = useMemo(() => {
-    return clientesFiados.reduce(
+    return (clientesFiados || []).reduce(
       (acc, c) => acc + (Number(c.deudaTotal) || 0),
       0
     );
@@ -158,7 +158,7 @@ export function S11_MetricasScreen(): React.ReactNode {
 
   // Cantidad de clientes con saldo deudor pendiente
   const clientesConSaldo = useMemo(() => {
-    return clientesFiados.filter((c) => (Number(c.deudaTotal) || 0) > 0).length;
+    return (clientesFiados || []).filter((c) => (Number(c.deudaTotal) || 0) > 0).length;
   }, [clientesFiados]);
 
   // Desglose por método de pago del turno actual
@@ -172,7 +172,7 @@ export function S11_MetricasScreen(): React.ReactNode {
     let fiado = 0;
     let fiadoCant = 0;
 
-    ventasTurnoActual.forEach((v) => {
+    (ventasTurnoActual || []).forEach((v) => {
       const monto = Number(v.total) || 0;
       const medio = v.medioPago;
 
