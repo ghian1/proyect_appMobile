@@ -206,9 +206,11 @@ export function S09_VentasScreen() {
     );
 
     const vueltoCalculado = useMemo(() => {
-        const pago = parseFloat(montoPagaCon.replace(',', '.'));
+        const texto = montoPagaCon.trim();
+        if (texto === '') return 0;
+        const pago = parseFloat(texto.replace(',', '.'));
         if (isNaN(pago) || pago < totalImporte) return 0;
-        return pago - totalImporte;
+        return Number((pago - totalImporte).toFixed(2));
     }, [montoPagaCon, totalImporte]);
 
     const handleConfirmarVenta = async () => {
@@ -217,14 +219,32 @@ export function S09_VentasScreen() {
             return;
         }
 
+        let vueltoVenta = 0;
+        let esMontoExactoSinInput = false;
+
         if (medioPago === 'Efectivo') {
-            const pagoIngresado = parseFloat(montoPagaCon.replace(',', '.'));
-            if (isNaN(pagoIngresado) || pagoIngresado < totalImporte) {
-                Alert.alert(
-                    'Monto Insuficiente',
-                    `El dinero ingresado ($${isNaN(pagoIngresado) ? '0.00' : pagoIngresado.toFixed(2)}) es menor al total a cobrar ($${totalImporte.toFixed(2)}). Por favor verifique.`
-                );
-                return;
+            const textoMonto = montoPagaCon.trim();
+            if (textoMonto === '') {
+                // Si el usuario no rellena el input, se asume cobro con monto exacto
+                esMontoExactoSinInput = true;
+                vueltoVenta = 0;
+            } else {
+                const pagoIngresado = parseFloat(textoMonto.replace(',', '.'));
+                if (isNaN(pagoIngresado) || pagoIngresado <= 0) {
+                    Alert.alert(
+                        'Monto Inválido',
+                        'Por favor ingresá un monto válido o dejalo en blanco para cobrar el monto exacto.'
+                    );
+                    return;
+                }
+                if (pagoIngresado < totalImporte) {
+                    Alert.alert(
+                        'Monto Insuficiente',
+                        `El dinero ingresado ($${pagoIngresado.toFixed(2)}) es menor al total a cobrar ($${totalImporte.toFixed(2)}). Por favor verifique.`
+                    );
+                    return;
+                }
+                vueltoVenta = Number((pagoIngresado - totalImporte).toFixed(2));
             }
         }
 
@@ -242,9 +262,20 @@ export function S09_VentasScreen() {
 
             await registrarVenta(listaItemsCarrito, totalImporte, medioPago, infoCliente);
 
-            const mensajeExito = medioPago === 'Fiado'
-                ? `Venta fiada a ${clienteFiadoSeleccionado?.nombre} por $${totalImporte.toFixed(2)}`
-                : `Cobro por ${medioPago} registrado por $${totalImporte.toFixed(2)}`;
+            let mensajeExito = '';
+            if (medioPago === 'Fiado') {
+                mensajeExito = `Venta fiada a ${clienteFiadoSeleccionado?.nombre} por $${totalImporte.toFixed(2)}`;
+            } else if (medioPago === 'Efectivo') {
+                if (esMontoExactoSinInput) {
+                    mensajeExito = `Cobro en Efectivo registrado por $${totalImporte.toFixed(2)} (Monto exacto, sin vuelto)`;
+                } else if (vueltoVenta > 0) {
+                    mensajeExito = `Cobro en Efectivo registrado por $${totalImporte.toFixed(2)}\nVuelto a entregar: $${vueltoVenta.toFixed(2)}`;
+                } else {
+                    mensajeExito = `Cobro en Efectivo registrado por $${totalImporte.toFixed(2)} (Monto exacto)`;
+                }
+            } else {
+                mensajeExito = `Cobro por ${medioPago} registrado por $${totalImporte.toFixed(2)}`;
+            }
 
             Alert.alert('¡Venta Exitosa!', mensajeExito, [
                 {
@@ -520,7 +551,7 @@ export function S09_VentasScreen() {
             {totalCantidad > 0 && (
                 <View style={styles.barraCarritoFlotante}>
                     <View>
-                        <Text style={styles.textoItemsCarrito}>{totalCantidad} items en carrito</Text>
+                        <Text style={styles.textoItemsCarrito}>{totalCantidad} items agregados</Text>
                         <Text style={styles.textoTotalCarrito}>${totalImporte.toFixed(2)}</Text>
                     </View>
 
@@ -530,7 +561,7 @@ export function S09_VentasScreen() {
                         activeOpacity={0.8}
                     >
                         <Ionicons name="cash-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-                        <Text style={styles.textoBotonVerCarrito}>Cobrar</Text>
+                        <Text style={styles.textoBotonVerCarrito}>Cobrar ➔</Text>
                     </TouchableOpacity>
                 </View>
             )}
@@ -667,10 +698,21 @@ export function S09_VentasScreen() {
 
                                 {medioPago === 'Efectivo' && (
                                     <View style={styles.seccionEfectivo}>
-                                        <Text style={styles.labelInput}>Paga con ($):</Text>
+                                        <View style={styles.filaEfectivoHeader}>
+                                            <Text style={styles.labelInput}>Paga con ($):</Text>
+                                            <TouchableOpacity
+                                                testID="btn-monto-exacto"
+                                                style={styles.botonPagaJusto}
+                                                onPress={() => setMontoPagaCon(totalImporte.toFixed(2))}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Text style={styles.textoPagaJusto}>Paga Justo</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                         <TextInput
+                                            testID="input-paga-con"
                                             style={styles.inputEfectivo}
-                                            placeholder="0.00"
+                                            placeholder={`$${totalImporte.toFixed(2)} (Monto exacto)`}
                                             placeholderTextColor="#94A3B8"
                                             keyboardType="numeric"
                                             value={montoPagaCon}
@@ -679,8 +721,15 @@ export function S09_VentasScreen() {
                                             blurOnSubmit={true}
                                             onSubmitEditing={Keyboard.dismiss}
                                         />
+                                        {montoPagaCon.trim() === '' && (
+                                            <View style={styles.badgeInfoEfectivo}>
+                                                <Text style={styles.textoBadgeInfoEfectivo}>
+                                                    ℹ️ Sin monto ingresado: se cobrará el monto exacto (${totalImporte.toFixed(2)}) con $0.00 de vuelto.
+                                                </Text>
+                                            </View>
+                                        )}
                                         {vueltoCalculado > 0 && (
-                                            <Text style={styles.textoVuelto}>
+                                            <Text testID="texto-vuelto" style={styles.textoVuelto}>
                                                 Vuelto a entregar: ${vueltoCalculado.toFixed(2)}
                                             </Text>
                                         )}
@@ -697,6 +746,7 @@ export function S09_VentasScreen() {
                                     </TouchableOpacity>
 
                                     <TouchableOpacity
+                                        testID="btn-confirmar-venta"
                                         style={[styles.botonCobrarModal, procesandoVenta && styles.botonDeshabilitado]}
                                         onPress={handleConfirmarVenta}
                                         disabled={procesandoVenta}
@@ -1277,6 +1327,35 @@ const styles = StyleSheet.create({
     },
     seccionEfectivo: {
         marginBottom: 14,
+    },
+    filaEfectivoHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    botonPagaJusto: {
+        backgroundColor: '#DEF7EC',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#BCF0DA',
+    },
+    textoPagaJusto: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#03543F',
+    },
+    badgeInfoEfectivo: {
+        backgroundColor: '#F1F5F9',
+        borderRadius: 6,
+        padding: 6,
+        marginTop: 6,
+    },
+    textoBadgeInfoEfectivo: {
+        fontSize: 11,
+        color: '#475569',
     },
     labelInput: {
         fontSize: 13,

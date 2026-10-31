@@ -20,6 +20,7 @@ import {
   EstadoCaja,
   obtenerHistorialCajas, 
   suscribirAEstadoCaja,
+  suscribirAHistorialCajas,
 } from '../services/cajaService';
 import { ClienteFiado, subscribeToClientesFiados } from '../services/fiadoService';
 import { suscribirAVentas, Venta } from '../services/saleService';
@@ -110,6 +111,17 @@ export function S11_MetricasScreen(): React.ReactNode {
 
     return () => {
       if (desuscribirCaja) desuscribirCaja();
+    };
+  }, []);
+
+  // Suscripción en tiempo real al historial de cierres de caja
+  useEffect(() => {
+    const desuscribirHistorial = suscribirAHistorialCajas((historial) => {
+      setHistorialCajas(historial || []);
+    });
+
+    return () => {
+      if (desuscribirHistorial) desuscribirHistorial();
     };
   }, []);
 
@@ -250,6 +262,12 @@ export function S11_MetricasScreen(): React.ReactNode {
                   cantidadVentas: cantidadVentasHoy,
                   desglose: desgloseMetodos,
                 });
+                try {
+                  const dataActualizada = await obtenerHistorialCajas();
+                  setHistorialCajas(dataActualizada || []);
+                } catch (e) {
+                  // ignorar si el listener ya actualiza
+                }
                 Alert.alert(
                   '¡Caja Cerrada!',
                   'El cierre quedó registrado en el historial y la recaudación se reinició a $0,00.'
@@ -646,27 +664,33 @@ export function S11_MetricasScreen(): React.ReactNode {
                 keyExtractor={(item) => item.id || Math.random().toString()}
                 showsVerticalScrollIndicator={false}
                 renderItem={({ item }) => {
-                  const fechaFormat = item.fechaCierre
+                  const fechaObj = item.fechaCierre || item.fechaRegistro;
+                  const fechaFormat = fechaObj
                     ? new Date(
-                        item.fechaCierre.toDate
-                          ? item.fechaCierre.toDate()
-                          : item.fechaCierre.seconds * 1000
+                        fechaObj.toDate
+                          ? fechaObj.toDate()
+                          : fechaObj.seconds
+                          ? fechaObj.seconds * 1000
+                          : fechaObj
                       ).toLocaleString('es-AR', {
                         dateStyle: 'short',
                         timeStyle: 'short',
                       })
                     : 'Fecha N/A';
 
+                  const total = Number(item.totalFacturado ?? item.totalFacturadoAlCierre ?? 0);
+                  const cantidad = Number(item.cantidadVentas ?? item.cantidadVentasAlCierre ?? 0);
+
                   return (
                     <View style={styles.cardHistorial}>
                       <View>
                         <Text style={styles.fechaHistorial}>Cierre - {fechaFormat}</Text>
                         <Text style={styles.itemsHistorialCount}>
-                          {item.cantidadVentas || 0} operaciones registradas
+                          {cantidad} {cantidad === 1 ? 'operación registrada' : 'operaciones registradas'}
                         </Text>
                       </View>
                       <Text style={styles.totalHistorial}>
-                        ${(item.totalFacturado || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </Text>
                     </View>
                   );

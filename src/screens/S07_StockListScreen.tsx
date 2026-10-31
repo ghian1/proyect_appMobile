@@ -59,8 +59,11 @@ export function S07_StockListScreen() {
 
   // Manejador del borrado lógico de categoría al mantener presionado
   const handleLongPressCategoria = (cat: string) => {
-    if (CATEGORIAS_BASE.includes(cat)) {
-      Alert.alert('Aviso', `La categoría "${cat}" es de sistema y no se puede eliminar.`);
+    if (cat === 'Todas' || cat === 'Stock Crítico' || cat === 'Sin Stock') {
+      return;
+    }
+    if (cat === 'Almacén') {
+      Alert.alert('Aviso', 'La categoría "Almacén" es la principal del sistema y no se puede desactivar.');
       return;
     }
 

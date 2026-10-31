@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -29,15 +29,17 @@ export function S03_ProductDetailScreen(): React.ReactNode {
 
   const [producto, setProducto] = useState<Producto | null>(null);
   const [cargando, setCargando] = useState(true);
+  const isDeletingRef = useRef(false);
 
   useEffect(() => {
     const docRef = doc(db, 'productos', productId);
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (isDeletingRef.current) return;
       if (docSnap.exists()) {
         setProducto({ id: docSnap.id, ...docSnap.data() } as Producto);
       } else {
-        Alert.alert('Error', 'El producto no existe o fue eliminado.');
-        navigation.goBack();
+        Alert.alert('Aviso', 'El producto no existe o fue eliminado.');
+        navigation.navigate('StockList');
       }
       setCargando(false);
     });
@@ -56,9 +58,11 @@ export function S03_ProductDetailScreen(): React.ReactNode {
           style: 'destructive',
           onPress: async () => {
             try {
+              isDeletingRef.current = true;
               await deleteDoc(doc(db, 'productos', productId));
-              navigation.goBack();
+              navigation.navigate('StockList');
             } catch (error) {
+              isDeletingRef.current = false;
               Alert.alert('Error', 'No se pudo eliminar el producto.');
             }
           },

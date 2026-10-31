@@ -132,26 +132,29 @@ export function S05_AltaEditarScreen() {
   };
 
   const handleLongPressCategoria = (cat: string) => {
+    if (cat === 'Todas' || cat === 'Stock Crítico' || cat === 'Sin Stock') {
+      return;
+    }
     if (cat === 'Almacén') {
-      Alert.alert('Aviso', `La categoría "${cat}" no se puede eliminar por seguridad.`);
+      Alert.alert('Aviso', 'La categoría "Almacén" es la principal del sistema y no se puede desactivar.');
       return;
     }
 
     Alert.alert(
-      'Eliminar Categoría',
-      `¿Estás seguro de que querés borrar la categoría "${cat}"? Se quitará de todos los productos que la tengan asignada.`,
+      'Desactivar Categoría',
+      `¿Estás seguro de que querés desactivar la categoría "${cat}"? Se ocultará de la lista y se quitará de los productos que la tengan asignada.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: 'Desactivar',
           style: 'destructive',
           onPress: async () => {
             try {
               await eliminarCategoriaBD(cat);
               setCategorias((prev) => (prev || []).filter((c) => c !== cat));
-              Alert.alert('Éxito', `La categoría "${cat}" fue eliminada correctamente.`);
+              Alert.alert('Éxito', `La categoría "${cat}" fue desactivada correctamente.`);
             } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar la categoría.');
+              Alert.alert('Error', 'No se pudo desactivar la categoría.');
             }
           },
         },

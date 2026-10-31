@@ -73,7 +73,9 @@ export const cerrarCaja = async (resumen?: {
   const datosCierre = {
     estado: 'cerrada',
     fechaCierre: serverTimestamp(),
+    totalFacturado: resumen?.totalFacturado || 0,
     totalFacturadoAlCierre: resumen?.totalFacturado || 0,
+    cantidadVentas: resumen?.cantidadVentas || 0,
     cantidadVentasAlCierre: resumen?.cantidadVentas || 0,
   };
 
@@ -91,13 +93,60 @@ export const cerrarCaja = async (resumen?: {
   }
 };
 
-// [NUEVA FUNCIÓN] Obtener el historial de cierres de caja ordenados por fecha más reciente
+// Escuchar el historial de cierres de caja en tiempo real desde Firestore
+export const suscribirAHistorialCajas = (
+  onData: (historial: any[]) => void,
+  onError?: (error: Error) => void
+) => {
+  const ref = collection(db, COLECCION_HISTORIAL_CIERRES);
+  return onSnapshot(
+    ref,
+    (snapshot) => {
+      const historial: any[] = [];
+      snapshot.forEach((docSnap) => {
+        historial.push({
+          id: docSnap.id,
+          ...docSnap.data(),
+        });
+      });
+
+      historial.sort((a, b) => {
+        const timeA = a.fechaRegistro?.toMillis
+          ? a.fechaRegistro.toMillis()
+          : a.fechaRegistro?.seconds
+          ? a.fechaRegistro.seconds * 1000
+          : a.fechaCierre?.toMillis
+          ? a.fechaCierre.toMillis()
+          : a.fechaCierre?.seconds
+          ? a.fechaCierre.seconds * 1000
+          : 0;
+
+        const timeB = b.fechaRegistro?.toMillis
+          ? b.fechaRegistro.toMillis()
+          : b.fechaRegistro?.seconds
+          ? b.fechaRegistro.seconds * 1000
+          : b.fechaCierre?.toMillis
+          ? b.fechaCierre.toMillis()
+          : b.fechaCierre?.seconds
+          ? b.fechaCierre.seconds * 1000
+          : 0;
+
+        return timeB - timeA;
+      });
+
+      onData(historial);
+    },
+    (error) => {
+      console.error('Error al escuchar historial de cierres de caja:', error);
+      if (onError) onError(error);
+    }
+  );
+};
+
+// Obtener el historial de cierres de caja ordenados por fecha más reciente
 export const obtenerHistorialCajas = async (): Promise<any[]> => {
   try {
-    const q = query(
-      collection(db, COLECCION_HISTORIAL_CIERRES),
-      orderBy('fechaRegistro', 'desc')
-    );
+    const q = query(collection(db, COLECCION_HISTORIAL_CIERRES));
     const querySnapshot = await getDocs(q);
     const historial: any[] = [];
     querySnapshot.forEach((docSnap) => {
@@ -106,6 +155,31 @@ export const obtenerHistorialCajas = async (): Promise<any[]> => {
         ...docSnap.data(),
       });
     });
+
+    historial.sort((a, b) => {
+      const timeA = a.fechaRegistro?.toMillis
+        ? a.fechaRegistro.toMillis()
+        : a.fechaRegistro?.seconds
+        ? a.fechaRegistro.seconds * 1000
+        : a.fechaCierre?.toMillis
+        ? a.fechaCierre.toMillis()
+        : a.fechaCierre?.seconds
+        ? a.fechaCierre.seconds * 1000
+        : 0;
+
+      const timeB = b.fechaRegistro?.toMillis
+        ? b.fechaRegistro.toMillis()
+        : b.fechaRegistro?.seconds
+        ? b.fechaRegistro.seconds * 1000
+        : b.fechaCierre?.toMillis
+        ? b.fechaCierre.toMillis()
+        : b.fechaCierre?.seconds
+        ? b.fechaCierre.seconds * 1000
+        : 0;
+
+      return timeB - timeA;
+    });
+
     return historial;
   } catch (error) {
     console.error('Error al obtener el historial de cajas:', error);

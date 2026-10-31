@@ -152,16 +152,32 @@ export const suscribirACategorias = (
   onError?: (error: Error) => void
 ) => {
   const ref = collection(db, COLECCION_CATEGORIAS);
-  // Filtramos solo las que tengan activa: true (o por defecto si el campo no existiera en viejas)
-  const q = query(ref, where('activa', '==', true));
 
   return onSnapshot(
-    q,
+    ref,
     (snapshot) => {
-      const catsGuardadas = (snapshot?.docs || [])
-        .map((docSnap) => docSnap?.data()?.nombre as string)
-        .filter(Boolean);
-      const listaUnificada = Array.from(new Set([...CATEGORIAS_BASE, ...catsGuardadas]));
+      const categoriasInactivas = new Set<string>();
+      const categoriasActivasBD: string[] = [];
+
+      (snapshot?.docs || []).forEach((docSnap) => {
+        const data = docSnap.data() || {};
+        const nombre = data.nombre || docSnap.id;
+        if (!nombre) return;
+
+        if (data.activa === false) {
+          categoriasInactivas.add(nombre.toLowerCase());
+        } else {
+          categoriasActivasBD.push(nombre);
+        }
+      });
+
+      // Filtramos de las categorías base aquellas que hayan sido desactivadas explícitamente en BD
+      const baseFiltradas = CATEGORIAS_BASE.filter(
+        (cat) => !categoriasInactivas.has(cat.toLowerCase())
+      );
+
+      // Unificamos las categorías base activas con las categorías creadas activas en Firestore
+      const listaUnificada = Array.from(new Set([...baseFiltradas, ...categoriasActivasBD]));
       onUpdate(listaUnificada || []);
     },
     (error) => {
@@ -171,32 +187,87 @@ export const suscribirACategorias = (
   );
 };
 
-// 6. Guardar una categoría nueva creada por el comerciante (Nace activa: true)
+// 6. Guardar una categoría nueva creada por el comerciante (Nace activa: true o se reactiva si estaba inactiva)
 export const crearCategoriaBD = async (nombre: string): Promise<void> => {
   if (!nombre || !nombre.trim()) return;
+  const nombreLimpio = nombre.trim();
+  const formateada = nombreLimpio.charAt(0).toUpperCase() + nombreLimpio.slice(1);
   const ref = collection(db, COLECCION_CATEGORIAS);
+
+  // Verificamos si ya existe por campo nombre
+  const q = query(ref, where('nombre', '==', formateada));
+  const snap = await getDocs(q);
+
+  if (!snap.empty) {
+    const batch = writeBatch(db);
+    snap.docs.forEach((d) => {
+      batch.update(d.ref, { activa: true, actualizadoEn: serverTimestamp() });
+    });
+    await batch.commit();
+    return;
+  }
+
+  // Verificamos por doc ID directo
+  const directDocRef = doc(db, COLECCION_CATEGORIAS, formateada);
+  const directDocSnap = await getDoc(directDocRef);
+  if (directDocSnap.exists()) {
+    await updateDoc(directDocRef, { activa: true, actualizadoEn: serverTimestamp() });
+    return;
+  }
+
+  // Si no existía previamente, la creamos activa
   await addDoc(ref, { 
-    nombre: nombre.trim(),
+    nombre: formateada,
     activa: true, 
     creadoEn: serverTimestamp() 
   });
 };
 
-// 7. [MODIFICADO] Borrado Lógico de una categoría (Soft Delete)
+// 7. Borrado Lógico de una categoría (Soft Delete)
 export async function eliminarCategoriaBD(nombreCategoria: string): Promise<void> {
   if (!nombreCategoria) throw new Error("Se requiere la categoría.");
 
   const batch = writeBatch(db);
 
-  // 1. Actualizamos el documento de la categoría para marcarlo como inactivo
-  const catRef = doc(db, COLECCION_CATEGORIAS, nombreCategoria);
-  batch.update(catRef, { activa: false });
+  // 1. Buscamos todos los documentos en la colección 'categorias' que coincidan con el nombre
+  const ref = collection(db, COLECCION_CATEGORIAS);
+  const q = query(ref, where('nombre', '==', nombreCategoria));
+  const snap = await getDocs(q);
+
+  let docEncontrado = false;
+  snap.docs.forEach((docSnap) => {
+    batch.update(docSnap.ref, { activa: false, actualizadoEn: serverTimestamp() });
+    docEncontrado = true;
+  });
+
+  // Verificamos si existe un documento cuyo ID sea el nombre de la categoría
+  const directDocRef = doc(db, COLECCION_CATEGORIAS, nombreCategoria);
+  const directDocSnap = await getDoc(directDocRef);
+  if (directDocSnap.exists()) {
+    batch.update(directDocRef, { activa: false, actualizadoEn: serverTimestamp() });
+    docEncontrado = true;
+  }
+
+  // Si no existía ningún documento en Firestore (por ejemplo, categorías base del sistema),
+  // creamos el documento con activa: false para persistir el soft-delete
+  if (!docEncontrado) {
+    batch.set(
+      directDocRef,
+      {
+        nombre: nombreCategoria,
+        activa: false,
+        actualizadoEn: serverTimestamp(),
+        creadoEn: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
 
   // 2. Limpiamos la categoría de los productos asociados para evitar inconsistencias
   const productosRef = collection(db, COLECCION_PRODUCTOS);
-  const snapshot = await getDocs(productosRef);
+  const snapshotProductos = await getDocs(productosRef);
 
-  (snapshot?.docs || []).forEach((docSnap) => {
+  (snapshotProductos?.docs || []).forEach((docSnap) => {
     const data = docSnap.data() || {};
     const categoriasArray: string[] = data.categorias || [];
     const categoriaPrincipal: string = data.categoria || '';
@@ -209,7 +280,7 @@ export async function eliminarCategoriaBD(nombreCategoria: string): Promise<void
           : categoriaPrincipal;
 
       batch.update(docSnap.ref, {
-        categorias: nuevasCategorias,
+        categorias: nuevasCategorias.length > 0 ? nuevasCategorias : ['Almacén'],
         categoria: nuevaPrincipal,
       });
     }

@@ -47,14 +47,16 @@ const mockUseNavigation = jest.fn(() => ({
   setOptions: jest.fn(),
 }));
 
+const mockUseRoute = jest.fn(() => ({
+  params: {},
+}));
+
 jest.mock('@react-navigation/native', () => {
   const actualNav = jest.requireActual('@react-navigation/native');
   return {
     ...actualNav,
     useNavigation: mockUseNavigation,
-    useRoute: () => ({
-      params: {},
-    }),
+    useRoute: mockUseRoute,
     useFocusEffect: jest.fn(),
   };
 });
@@ -86,10 +88,18 @@ jest.mock('firebase/firestore', () => {
       return jest.fn();
     }),
     query: jest.fn((colRef, ..._constraints) => colRef),
+    where: jest.fn(),
     orderBy: jest.fn(),
     serverTimestamp: jest.fn(() => 'MOCK_SERVER_TIMESTAMP'),
     increment: jest.fn((val: number) => ({ _methodName: 'increment', _val: val })),
-    getDocs: jest.fn(async () => ({ docs: [] })),
+    getDocs: jest.fn(async () => ({ docs: [], forEach: jest.fn() })),
+    getDoc: jest.fn(async () => ({ exists: () => false, data: () => ({}) })),
+    writeBatch: jest.fn(() => ({
+      set: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      commit: jest.fn(async () => Promise.resolve()),
+    })),
   };
 });
 
