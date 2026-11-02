@@ -82,7 +82,7 @@ export function S03_ProductDetailScreen(): React.ReactNode {
   if (!producto) return null;
 
   // Lógica de colores dinámicos para el stock
-  const stock = producto.stock || 0;
+  const stock = producto?.stock ?? 0;
   const esSinStock = stock <= 0;
   const esCritico = stock > 0 && stock <= 5;
 
@@ -114,7 +114,7 @@ export function S03_ProductDetailScreen(): React.ReactNode {
         <View style={styles.cardInfo}>
           <Text style={styles.categoria}>{nombreCategoria}</Text>
           <Text style={styles.nombre}>{producto.nombre}</Text>
-          <Text style={styles.precio}>${producto.precio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</Text>
+          <Text style={styles.precio}>${(producto?.precio ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</Text>
 
           <View style={styles.separator} />
 

@@ -74,8 +74,8 @@ export default function S08_FiadosScreen(): React.ReactNode {
     if (!cliente.id) return;
 
     const mensajeAdvertencia =
-      cliente.deudaTotal > 0
-        ? `¡Atención! ${cliente.nombre} tiene una deuda pendiente de $${cliente.deudaTotal.toLocaleString(
+      (cliente?.deudaTotal ?? 0) > 0
+        ? `¡Atención! ${cliente?.nombre || 'El cliente'} tiene una deuda pendiente de $${(cliente?.deudaTotal ?? 0).toLocaleString(
             'es-AR'
           )}. ¿Querés eliminarlo de todas formas?`
         : `¿Estás seguro de que querés eliminar a ${cliente.nombre} de la libreta de fiados?`;
@@ -165,8 +165,8 @@ export default function S08_FiadosScreen(): React.ReactNode {
       Alert.alert(
         '¡Éxito!',
         tipoMovimiento === 'FIADO'
-          ? `Se sumaron $${montoNum.toLocaleString('es-AR')} a la deuda de ${clienteSeleccionado.nombre}`
-          : `Se descontaron $${montoNum.toLocaleString('es-AR')} de la deuda de ${clienteSeleccionado.nombre}`
+          ? `Se sumaron $${(montoNum ?? 0).toLocaleString('es-AR')} a la deuda de ${clienteSeleccionado.nombre}`
+          : `Se descontaron $${(montoNum ?? 0).toLocaleString('es-AR')} de la deuda de ${clienteSeleccionado.nombre}`
       );
       setModalSaldoVisible(false);
     } catch (error) {
@@ -183,6 +183,7 @@ export default function S08_FiadosScreen(): React.ReactNode {
           <Text style={styles.nombreCliente}>{item.nombre}</Text>
           <TouchableOpacity
             style={styles.btnEliminar}
+            testID="btn-eliminar-cliente"
             onPress={() => handleEliminarCliente(item)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -207,10 +208,10 @@ export default function S08_FiadosScreen(): React.ReactNode {
         <Text
           style={[
             styles.montoDeuda,
-            item.deudaTotal > 0 ? styles.conDeuda : styles.sinDeuda,
+            (item?.deudaTotal ?? 0) > 0 ? styles.conDeuda : styles.sinDeuda,
           ]}
         >
-          ${item.deudaTotal.toLocaleString('es-AR')}
+          ${(item?.deudaTotal ?? 0).toLocaleString('es-AR')}
         </Text>
 
         <View style={styles.botonesAccion}>

@@ -27,7 +27,7 @@ import { suscribirAVentas, Venta } from '../services/saleService';
 
 // Formateador de moneda en pesos argentinos ($ 1.250,00)
 const formatearMoneda = (monto: number): string => {
-  const seguro = isNaN(monto) ? 0 : Number(monto);
+  const seguro = monto == null || isNaN(Number(monto)) ? 0 : Number(monto);
   const partes = seguro.toFixed(2).split('.');
   const enteros = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   const decimales = partes[1];
@@ -690,7 +690,7 @@ export function S11_MetricasScreen(): React.ReactNode {
                         </Text>
                       </View>
                       <Text style={styles.totalHistorial}>
-                        ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        ${(total ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </Text>
                     </View>
                   );

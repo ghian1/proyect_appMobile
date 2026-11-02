@@ -204,9 +204,9 @@ export default function S10_ComprasScreen(): React.ReactNode {
 
     if (diferencia > 0.01) {
       const esMayor = montoTicket > totalCalculado;
-      const mensajeDiferencia = `El total ingresado ($${montoTicket.toLocaleString('es-AR')}) es ${
+      const mensajeDiferencia = `El total ingresado ($${(montoTicket ?? 0).toLocaleString('es-AR')}) es ${
         esMayor ? 'mayor' : 'menor'
-      } que el calculado en la planilla ($${totalCalculado.toLocaleString('es-AR')}) por una diferencia de $${diferencia.toLocaleString('es-AR')}.\n\n¿Querés registrar el costo real del ticket de todas formas?`;
+      } que el calculado en la planilla ($${(totalCalculado ?? 0).toLocaleString('es-AR')}) por una diferencia de $${(diferencia ?? 0).toLocaleString('es-AR')}.\n\n¿Querés registrar el costo real del ticket de todas formas?`;
 
       Alert.alert('Diferencia de Monto', mensajeDiferencia, [
         { text: 'Revisar Planilla', style: 'cancel' },
@@ -315,12 +315,12 @@ export default function S10_ComprasScreen(): React.ReactNode {
                 <View style={{ flex: 1, paddingRight: 8 }}>
                   <Text style={styles.nombreItem}>{item.nombre}</Text>
                   <Text style={styles.detalleItem}>
-                    {item.cantidad} u. x ${item.precioCosto.toLocaleString('es-AR')} (Costo)
+                    {item.cantidad} u. x ${(item?.precioCosto ?? 0).toLocaleString('es-AR')} (Costo)
                   </Text>
                 </View>
 
                 <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                  <Text style={styles.subtotalItem}>${item.subtotal.toLocaleString('es-AR')}</Text>
+                  <Text style={styles.subtotalItem}>${(item?.subtotal ?? 0).toLocaleString('es-AR')}</Text>
 
                   <View style={styles.accionesCard}>
                     <TouchableOpacity
@@ -357,7 +357,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
             <View style={styles.panelInferior}>
               <View style={styles.resumenTotal}>
                 <Text style={styles.labelTotal}>MONTO PLANILLA ESTIMADO</Text>
-                <Text style={styles.montoTotal}>${totalCalculado.toLocaleString('es-AR')}</Text>
+                <Text style={styles.montoTotal}>${(totalCalculado ?? 0).toLocaleString('es-AR')}</Text>
               </View>
 
               <TouchableOpacity
@@ -464,7 +464,7 @@ export default function S10_ComprasScreen(): React.ReactNode {
               />
 
               <Text style={styles.infoPlanillaText}>
-                Total según planilla actual: ${totalCalculado.toLocaleString('es-AR')}
+                Total según planilla actual: ${(totalCalculado ?? 0).toLocaleString('es-AR')}
               </Text>
 
               <View style={styles.modalAcciones}>

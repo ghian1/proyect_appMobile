@@ -104,10 +104,10 @@ describe('Pantalla de Fiados / Cuentas Corrientes - S08_FiadosScreen', () => {
   });
 
   it('debe advertir si se intenta eliminar un cliente con deuda pendiente mayor a $0', () => {
-    const { getAllByText } = render(<S08_FiadosScreen />);
+    const { getAllByTestId } = render(<S08_FiadosScreen />);
 
-    // Buscar los botones de eliminar (icono 🗑️)
-    const botonesEliminar = getAllByText('🗑️');
+    // Buscar los botones de eliminar mediante testID
+    const botonesEliminar = getAllByTestId('btn-eliminar-cliente');
     // El primer cliente es Alberto Gómez con deuda de 4500
     fireEvent.press(botonesEliminar[0]);
 

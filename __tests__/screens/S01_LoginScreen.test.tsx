@@ -48,35 +48,35 @@ describe('Pantalla de Autenticación - S01_LoginScreen', () => {
     expect(loginMock).not.toHaveBeenCalled();
   });
 
-  it('debe alertar al usuario si la contraseña para registrarse tiene menos de 6 caracteres', async () => {
+  it('debe alertar al usuario si el PIN para registrarse no tiene exactamente 6 dígitos', async () => {
     const { getByText, getByPlaceholderText } = render(<S01_LoginScreen />);
 
     fireEvent.changeText(getByPlaceholderText('Correo electrónico'), 'nuevo@mingo.com');
-    fireEvent.changeText(getByPlaceholderText('Contraseña'), '12345'); // 5 caracteres
+    fireEvent.changeText(getByPlaceholderText('Contraseña'), '12345'); // 5 dígitos
 
     const botonRegistrarme = getByText('Crear cuenta nueva');
     fireEvent.press(botonRegistrarme);
 
     expect(Alert.alert).toHaveBeenCalledWith(
-      'Contraseña corta',
-      'La contraseña debe tener al menos 6 caracteres.'
+      'PIN inválido',
+      'El PIN debe contener exactamente 6 dígitos numéricos.'
     );
     expect(registerMock).not.toHaveBeenCalled();
   });
 
-  it('debe llamar a login con las credenciales ingresadas al presionar Iniciar Sesión', async () => {
+  it('debe llamar a login con las credenciales ingresadas al presionar Iniciar Sesión con PIN válido', async () => {
     loginMock.mockResolvedValueOnce(undefined);
 
     const { getByText, getByPlaceholderText } = render(<S01_LoginScreen />);
 
     fireEvent.changeText(getByPlaceholderText('Correo electrónico'), 'cajero@mingo.com');
-    fireEvent.changeText(getByPlaceholderText('Contraseña'), 'claveSegura123');
+    fireEvent.changeText(getByPlaceholderText('Contraseña'), '123456');
 
     const botonIngresar = getByText('Iniciar Sesión');
     fireEvent.press(botonIngresar);
 
     await waitFor(() => {
-      expect(loginMock).toHaveBeenCalledWith('cajero@mingo.com', 'claveSegura123');
+      expect(loginMock).toHaveBeenCalledWith('cajero@mingo.com', '123456');
     });
   });
 
@@ -86,7 +86,7 @@ describe('Pantalla de Autenticación - S01_LoginScreen', () => {
     const { getByText, getByPlaceholderText } = render(<S01_LoginScreen />);
 
     fireEvent.changeText(getByPlaceholderText('Correo electrónico'), 'cajero@mingo.com');
-    fireEvent.changeText(getByPlaceholderText('Contraseña'), 'claveErronea');
+    fireEvent.changeText(getByPlaceholderText('Contraseña'), '654321');
 
     const botonIngresar = getByText('Iniciar Sesión');
     fireEvent.press(botonIngresar);

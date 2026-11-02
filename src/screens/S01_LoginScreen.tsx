@@ -20,6 +20,7 @@ export default function S01_LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [cargando, setCargando] = useState(false);
+    const [errorPin, setErrorPin] = useState<string | null>(null);
     const { login, register } = useAuth();
 
     // Estados para el Modal de Recuperación de Contraseña
@@ -27,14 +28,21 @@ export default function S01_LoginScreen() {
     const [emailRecuperacion, setEmailRecuperacion] = useState('');
     const [enviandoRecuperacion, setEnviandoRecuperacion] = useState(false);
 
-    // Validaciones individuales para el indicador en tiempo real
-    const tieneMinLength = password.length >= 8;
-    const tieneMayuscula = /[A-Z]/.test(password);
-    const tieneSimbolo = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    // Validación del PIN numérico de 6 dígitos
+    const esPinValido = /^\d{6}$/.test(password);
+    const tiene6Digitos = password.length === 6;
 
     const handleLogin = async () => {
+        setErrorPin(null);
         if (!email || !password) {
             Alert.alert('Atención', 'Por favor completá correo y contraseña.');
+            return;
+        }
+
+        if (!esPinValido) {
+            const mensaje = 'El PIN debe contener exactamente 6 dígitos numéricos.';
+            setErrorPin(mensaje);
+            Alert.alert('PIN inválido', mensaje);
             return;
         }
 
@@ -49,16 +57,16 @@ export default function S01_LoginScreen() {
     };
 
     const handleRegister = async () => {
+        setErrorPin(null);
         if (!email || !password) {
             Alert.alert('Atención', 'Por favor completá correo y contraseña.');
             return;
         }
 
-        if (!tieneMinLength || !tieneMayuscula || !tieneSimbolo) {
-            Alert.alert(
-                'Contraseña insegura',
-                'Por favor asegurate de cumplir con todos los requisitos de seguridad indicados debajo de la contraseña.'
-            );
+        if (!esPinValido) {
+            const mensaje = 'El PIN debe contener exactamente 6 dígitos numéricos.';
+            setErrorPin(mensaje);
+            Alert.alert('PIN inválido', mensaje);
             return;
         }
 
@@ -128,50 +136,44 @@ export default function S01_LoginScreen() {
                     />
                 </View>
 
-                {/* Campo de Contraseña */}
-                <View style={styles.inputWrapper}>
-                    <Ionicons name="lock-closed-outline" size={18} color="#94A3B8" style={styles.inputIcon} />
+                {/* Campo de PIN Numérico de 6 Dígitos */}
+                <View style={[styles.inputWrapper, !!errorPin && styles.inputWrapperError]}>
+                    <Ionicons name="lock-closed-outline" size={18} color={errorPin ? "#EF4444" : "#94A3B8"} style={styles.inputIcon} />
                     <TextInput
                         style={styles.input}
                         placeholder="Contraseña"
                         placeholderTextColor="#94A3B8"
                         value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
+                        onChangeText={(texto) => {
+                            const filtrado = texto.replace(/[^0-9]/g, '').slice(0, 6);
+                            setPassword(filtrado);
+                            if (errorPin) setErrorPin(null);
+                        }}
+                        keyboardType="numeric"
+                        secureTextEntry={true}
+                        maxLength={6}
                     />
                 </View>
 
-                {/* Validador visual dinámico de contraseña (aparece mientras escribe) */}
-                {password.length > 0 && (
+                {/* Mensaje de error claro en pantalla si el PIN no cumple con el formato */}
+                {!!errorPin && (
+                    <View style={styles.contenedorErrorPin}>
+                        <Ionicons name="alert-circle-outline" size={14} color="#EF4444" />
+                        <Text style={styles.textoErrorPin}>{errorPin}</Text>
+                    </View>
+                )}
+
+                {/* Validador visual dinámico de PIN (aparece mientras escribe) */}
+                {password.length > 0 && !errorPin && (
                     <View style={styles.validadorContenedor}>
                         <View style={styles.validadorFila}>
                             <Ionicons 
-                                name={tieneMinLength ? "checkmark-circle" : "ellipse-outline"} 
+                                name={tiene6Digitos ? "checkmark-circle" : "ellipse-outline"} 
                                 size={14} 
-                                color={tieneMinLength ? "#16A34A" : "#94A3B8"} 
+                                color={tiene6Digitos ? "#16A34A" : "#94A3B8"} 
                             />
-                            <Text style={[styles.validadorTexto, tieneMinLength && styles.textoCumplido]}>
-                                Al menos 8 caracteres
-                            </Text>
-                        </View>
-                        <View style={styles.validadorFila}>
-                            <Ionicons 
-                                name={tieneMayuscula ? "checkmark-circle" : "ellipse-outline"} 
-                                size={14} 
-                                color={tieneMayuscula ? "#16A34A" : "#94A3B8"} 
-                            />
-                            <Text style={[styles.validadorTexto, tieneMayuscula && styles.textoCumplido]}>
-                                Una letra mayúscula
-                            </Text>
-                        </View>
-                        <View style={styles.validadorFila}>
-                            <Ionicons 
-                                name={tieneSimbolo ? "checkmark-circle" : "ellipse-outline"} 
-                                size={14} 
-                                color={tieneSimbolo ? "#16A34A" : "#94A3B8"} 
-                            />
-                            <Text style={[styles.validadorTexto, tieneSimbolo && styles.textoCumplido]}>
-                                Un símbolo especial (!@#$...)
+                            <Text style={[styles.validadorTexto, tiene6Digitos && styles.textoCumplido]}>
+                                Exactamente 6 números ({password.length}/6)
                             </Text>
                         </View>
                     </View>
@@ -319,6 +321,9 @@ const styles = StyleSheet.create({
         marginBottom: 14,
         paddingHorizontal: 12,
     },
+    inputWrapperError: {
+        borderColor: '#EF4444',
+    },
     inputIcon: {
         marginRight: 10,
     },
@@ -327,6 +332,19 @@ const styles = StyleSheet.create({
         height: 48,
         fontSize: 15,
         color: '#0F172A',
+    },
+    contenedorErrorPin: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 12,
+        marginTop: -6,
+        paddingHorizontal: 4,
+    },
+    textoErrorPin: {
+        fontSize: 12,
+        color: '#EF4444',
+        fontWeight: '500',
     },
     validadorContenedor: {
         backgroundColor: '#F8FAFC',

@@ -145,7 +145,7 @@ export function CobroEfectivo({
       <View style={styles.cabeceraTotal}>
         <Text style={styles.labelTotal}>TOTAL A COBRAR</Text>
         <Text testID="texto-total-cobro" style={styles.montoTotal}>
-          ${total.toFixed(2)}
+          ${(total ?? 0).toFixed(2)}
         </Text>
       </View>
 
@@ -167,7 +167,7 @@ export function CobroEfectivo({
         testID="input-paga-con"
         accessibilityLabel="Monto abonado por el cliente"
         style={styles.input}
-        placeholder={`$${total.toFixed(2)} (Monto exacto)`}
+        placeholder={`$${(total ?? 0).toFixed(2)} (Monto exacto)`}
         placeholderTextColor="#8E8E93"
         keyboardType="numeric"
         value={montoAbonado}
@@ -188,7 +188,7 @@ export function CobroEfectivo({
         <View testID="contenedor-vuelto" style={styles.badgeVuelto}>
           <Text style={styles.labelVuelto}>Vuelto a entregar:</Text>
           <Text testID="texto-vuelto" style={styles.montoVuelto}>
-            ${vuelto.toFixed(2)}
+            ${(vuelto ?? 0).toFixed(2)}
           </Text>
         </View>
       )}

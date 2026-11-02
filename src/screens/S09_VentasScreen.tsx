@@ -333,7 +333,7 @@ export function S09_VentasScreen() {
                         {item.nombre}
                     </Text>
 
-                    <Text style={styles.cardPrecio}>${item.precio.toFixed(2)}</Text>
+                    <Text style={styles.cardPrecio}>${(item?.precio ?? 0).toFixed(2)}</Text>
                 </View>
 
                 <View style={styles.cardStockContainer}>
@@ -552,7 +552,7 @@ export function S09_VentasScreen() {
                 <View style={styles.barraCarritoFlotante}>
                     <View>
                         <Text style={styles.textoItemsCarrito}>{totalCantidad} items agregados</Text>
-                        <Text style={styles.textoTotalCarrito}>${totalImporte.toFixed(2)}</Text>
+                        <Text style={styles.textoTotalCarrito}>${(totalImporte ?? 0).toFixed(2)}</Text>
                     </View>
 
                     <TouchableOpacity
@@ -583,10 +583,10 @@ export function S09_VentasScreen() {
                                             <View style={{ flex: 1 }}>
                                                 <Text style={styles.itemNombre}>{item.nombre}</Text>
                                                 <Text style={styles.itemDetalle}>
-                                                    {item.cantidad} x ${item.precio.toFixed(2)}
+                                                    {item.cantidad} x ${(item?.precio ?? 0).toFixed(2)}
                                                 </Text>
                                             </View>
-                                            <Text style={styles.itemSubtotal}>${item.subtotal.toFixed(2)}</Text>
+                                            <Text style={styles.itemSubtotal}>${(item?.subtotal ?? 0).toFixed(2)}</Text>
                                         </View>
                                     ))}
                                 </ScrollView>
@@ -595,7 +595,7 @@ export function S09_VentasScreen() {
 
                                 <View style={styles.filaTotal}>
                                     <Text style={styles.labelTotal}>TOTAL A COBRAR:</Text>
-                                    <Text style={styles.valorTotal}>${totalImporte.toFixed(2)}</Text>
+                                    <Text style={styles.valorTotal}>${(totalImporte ?? 0).toFixed(2)}</Text>
                                 </View>
 
                                 <Text style={styles.labelSeccion}>Medio de Pago:</Text>
@@ -684,7 +684,7 @@ export function S09_VentasScreen() {
                                                                     {cliente.nombre}
                                                                 </Text>
                                                                 <Text style={styles.deudaCliente}>
-                                                                    Deuda actual: ${cliente.deudaTotal?.toFixed(2) || '0.00'}
+                                                                    Deuda actual: ${(cliente?.deudaTotal ?? 0).toFixed(2)}
                                                                 </Text>
                                                             </View>
                                                             {seleccionado && <Ionicons name="checkmark-circle" size={20} color="#0284C7" />}
