@@ -125,7 +125,9 @@ export function S07_StockListScreen() {
 
       let coincideStock = true;
       if (estadoStockSeleccionado === 'Stock Crítico') {
-        coincideStock = item.stock > 0 && item.stock < 5;
+        coincideStock = item.esAlPeso
+          ? item.stock > 0 && item.stock < 1000
+          : item.stock > 0 && item.stock < 5;
       } else if (estadoStockSeleccionado === 'Sin Stock') {
         coincideStock = item.stock <= 0;
       }
@@ -160,7 +162,22 @@ export function S07_StockListScreen() {
 
   const renderProducto = ({ item }: { item: Producto }) => {
     const sinStock = item.stock <= 0;
-    const esCritico = item.stock > 0 && item.stock < 5;
+    const esAlPeso = Boolean(item.esAlPeso);
+    const esCritico = item.stock > 0 && (esAlPeso ? item.stock < 1000 : item.stock < 5);
+
+    let textoStock = 'SIN STOCK';
+    if (!sinStock) {
+      if (esAlPeso) {
+        if (item.stock >= 1000) {
+          const kg = Number((item.stock / 1000).toFixed(2));
+          textoStock = `Stock: ${kg} kg`;
+        } else {
+          textoStock = `Stock: ${item.stock} g`;
+        }
+      } else {
+        textoStock = `Stock: ${item.stock} unidades.`;
+      }
+    }
 
     return (
       <TouchableOpacity
@@ -185,6 +202,12 @@ export function S07_StockListScreen() {
               <Text style={styles.textoSinImagen}>Sin Imagen</Text>
             </View>
           )}
+          {esAlPeso && (
+            <View style={styles.badgeAlPesoFlotante}>
+              <Ionicons name="scale-outline" size={10} color="#0284C7" />
+              <Text style={styles.textoBadgeAlPeso}>Al peso</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.cardContenido}>
@@ -198,7 +221,9 @@ export function S07_StockListScreen() {
             {item.nombre}
           </Text>
 
-          <Text style={styles.cardPrecio}>${(item?.precio ?? 0).toFixed(2)}</Text>
+          <Text style={styles.cardPrecio}>
+            ${(item?.precio ?? 0).toFixed(2)}{esAlPeso ? ' / 100g' : ''}
+          </Text>
         </View>
 
         <View style={styles.cardStockContainer}>
@@ -218,7 +243,7 @@ export function S07_StockListScreen() {
                 sinStock ? styles.textoSinStock : esCritico ? styles.textoStockCritico : styles.textoConStock,
               ]}
             >
-              {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} unidades.`}
+              {textoStock}
             </Text>
           </View>
         </View>
@@ -584,7 +609,7 @@ const styles = StyleSheet.create({
   imagenContenedor: {
     width: '100%',
     height: 110,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#F1F5F9',
@@ -592,6 +617,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
     marginBottom: 8,
+    position: 'relative',
+  },
+  badgeAlPesoFlotante: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  textoBadgeAlPeso: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#0284C7',
   },
   imagenProd: {
     width: '100%',

@@ -100,4 +100,29 @@ describe('Módulo de Ventas - Servicio saleService', () => {
       })
     );
   });
+
+  it('debe registrar la venta de productos al peso descontando exactamente los gramos vendidos', async () => {
+    const itemsAlPesoMock: ItemCarrito[] = [
+      {
+        idProducto: 'prod_queso',
+        nombre: 'Queso Cremoso',
+        precio: 1200, // cada 100g
+        cantidad: 250, // 250 gramos
+        subtotal: 3000, // (250/100) * 1200 = 3000
+        esAlPeso: true,
+      },
+    ];
+
+    await registrarVenta(itemsAlPesoMock, 3000, 'Efectivo');
+
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'productos', 'prod_queso');
+    // Debe descontar exactamente 250 gramos del stock
+    expect(increment).toHaveBeenCalledWith(-250);
+    expect(updateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        stock: expect.objectContaining({ _methodName: 'increment', _val: -250 }),
+      })
+    );
+  });
 });

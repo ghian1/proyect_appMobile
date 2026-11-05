@@ -148,4 +148,129 @@ describe('Pantalla de Ventas y Cobro en Efectivo - S09_VentasScreen', () => {
     const inputPagaCon = getByTestId('input-paga-con');
     expect(inputPagaCon.props.value).toBe('3500.00');
   });
+
+  describe('Venta de Productos al Peso (por gramos)', () => {
+    const productoAlPesoMock: productService.Producto[] = [
+      {
+        id: 'prod_queso',
+        nombre: 'Queso Cremoso La Paulina',
+        precio: 1200, // cada 100g
+        stock: 5000, // 5 kg en gramos
+        categoria: 'Fiambrería',
+        esAlPeso: true,
+      },
+    ];
+
+    beforeEach(() => {
+      (productService.suscribirAProductos as jest.Mock).mockImplementation((onData) => {
+        onData(productoAlPesoMock);
+        return jest.fn();
+      });
+    });
+
+    it('debe mostrar el producto con etiqueta de precio cada 100g y stock amigable en kg', () => {
+      const { getByText } = render(<S09_VentasScreen />);
+
+      expect(getByText('Queso Cremoso La Paulina')).toBeTruthy();
+      expect(getByText('$1200.00 / 100g')).toBeTruthy();
+      expect(getByText('Stock: 5 kg')).toBeTruthy();
+      expect(getByText('Al peso')).toBeTruthy();
+    });
+
+    it('al seleccionar un producto al peso, la cantidad inicial por defecto en el carrito debe ser 100g', () => {
+      const { getByText, getAllByText, getByTestId } = render(<S09_VentasScreen />);
+
+      // Presionar "Agregar"
+      const botonAgregar = getByTestId('btn-agregar-prod_queso');
+      fireEvent.press(botonAgregar);
+
+      // Debe mostrar 100g en el selector de la tarjeta
+      expect(getByText('100g')).toBeTruthy();
+
+      // En la barra flotante: 1 item y $1200.00 ((100/100) * 1200)
+      expect(getByText('1 items agregados')).toBeTruthy();
+      expect(getAllByText('$1200.00').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('los botones + y - deben aumentar o disminuir en saltos de 50 gramos con mínimo de 50g', () => {
+      const { getByText, queryByText, getByTestId } = render(<S09_VentasScreen />);
+
+      // 1. Agregar: 100g
+      fireEvent.press(getByTestId('btn-agregar-prod_queso'));
+      expect(getByText('100g')).toBeTruthy();
+
+      // 2. Presionar +: debe pasar a 150g
+      const botonSumar = getByTestId('btn-sumar-prod_queso');
+      fireEvent.press(botonSumar);
+      expect(getByText('150g')).toBeTruthy();
+      // Subtotal de 150g a $1200/100g = 1.5 * 1200 = $1800
+      expect(getByText('$1800.00')).toBeTruthy();
+
+      // 3. Presionar + de nuevo: pasa a 200g ($2400)
+      fireEvent.press(botonSumar);
+      expect(getByText('200g')).toBeTruthy();
+      expect(getByText('$2400.00')).toBeTruthy();
+
+      // 4. Presionar -: pasa a 150g
+      const botonRestar = getByTestId('btn-restar-prod_queso');
+      fireEvent.press(botonRestar);
+      expect(getByText('150g')).toBeTruthy();
+
+      // 5. Presionar -: pasa a 100g
+      fireEvent.press(botonRestar);
+      expect(getByText('100g')).toBeTruthy();
+
+      // 6. Presionar -: pasa a 50g (mínimo permitido antes de remover)
+      fireEvent.press(botonRestar);
+      expect(getByText('50g')).toBeTruthy();
+      // Subtotal de 50g = (50/100)*1200 = $600
+      expect(getByText('$600.00')).toBeTruthy();
+
+      // 7. Presionar - en 50g: debe removerse del carrito
+      fireEvent.press(botonRestar);
+      expect(queryByText('50g')).toBeNull();
+      expect(getByText('Agregar')).toBeTruthy();
+    });
+
+    it('al confirmar el cobro debe registrar la venta y descontar los gramos exactos en Firestore', async () => {
+      const { getByText, getByTestId } = render(<S09_VentasScreen />);
+
+      // 1. Agregar producto (100g)
+      fireEvent.press(getByTestId('btn-agregar-prod_queso'));
+
+      // 2. Aumentar a 250g con 3 clics en + (100 -> 150 -> 200 -> 250)
+      const botonSumar = getByTestId('btn-sumar-prod_queso');
+      fireEvent.press(botonSumar);
+      fireEvent.press(botonSumar);
+      fireEvent.press(botonSumar);
+      expect(getByText('250g')).toBeTruthy();
+
+      // 3. Abrir modal de cobro
+      fireEvent.press(getByText('Cobrar ➔'));
+
+      // 4. Verificar resumen en modal: 250g x $1200.00 (cada 100g) y subtotal $3000.00
+      expect(getByText('250g x $1200.00 (cada 100g)')).toBeTruthy();
+
+      // 5. Confirmar venta en efectivo
+      fireEvent.press(getByTestId('btn-confirmar-venta'));
+
+      await waitFor(() => {
+        expect(saleService.registrarVenta).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              idProducto: 'prod_queso',
+              nombre: 'Queso Cremoso La Paulina',
+              precio: 1200,
+              cantidad: 250,
+              subtotal: 3000,
+              esAlPeso: true,
+            }),
+          ]),
+          3000,
+          'Efectivo',
+          undefined
+        );
+      });
+    });
+  });
 });

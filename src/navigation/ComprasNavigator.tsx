@@ -23,7 +23,7 @@ export default function ComprasNavigator(): React.ReactNode {
         component={S10_ComprasScreen}
         options={{
           title: 'Planilla de Compras',
-          // NUEVO: Botón de retroceso hacia la pantalla de Inicio
+          // Botón de retroceso hacia la pantalla de Inicio
           headerLeft: () => <HeaderBackButton />,
         }}
       />

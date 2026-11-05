@@ -5,6 +5,11 @@ import { Alert } from 'react-native';
 // Mock de React Native Alert
 jest.spyOn(Alert, 'alert');
 
+// Mock de AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+
 // Mock de Safe Area Context
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
@@ -94,6 +99,15 @@ jest.mock('firebase/firestore', () => {
     increment: jest.fn((val: number) => ({ _methodName: 'increment', _val: val })),
     getDocs: jest.fn(async () => ({ docs: [], forEach: jest.fn() })),
     getDoc: jest.fn(async () => ({ exists: () => false, data: () => ({}) })),
+    runTransaction: jest.fn(async (_db, updateFunction) => {
+      const mockTx = {
+        get: jest.fn(async () => ({ exists: () => true, data: () => ({ stock: 0 }) })),
+        update: jest.fn(),
+        set: jest.fn(),
+        delete: jest.fn(),
+      };
+      return await updateFunction(mockTx);
+    }),
     writeBatch: jest.fn(() => ({
       set: jest.fn(),
       update: jest.fn(),

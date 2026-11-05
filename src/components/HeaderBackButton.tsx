@@ -1,4 +1,4 @@
-// NUEVO: Componente reutilizable para el botón de retroceso en el encabezado
+// Componente reutilizable para el botón de retroceso en el encabezado
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';

@@ -1,4 +1,4 @@
-// NUEVO: Se agrega onSnapshot para suscripción en tiempo real a ventas
+// Suscripción y registro de ventas en tiempo real
 import { addDoc, collection, doc, increment, onSnapshot, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -9,6 +9,7 @@ export interface ItemCarrito {
     precio: number;
     cantidad: number;
     subtotal: number;
+    esAlPeso?: boolean;
 }
 
 // TIPO DE MEDIO DE PAGO
@@ -83,7 +84,7 @@ export const registrarVenta = async (
 };
 
 
-// NUEVO: Función para escuchar la colección de ventas en tiempo real para el módulo de Métricas
+// Función para escuchar la colección de ventas en tiempo real para el módulo de Métricas
 export const suscribirAVentas = (
     onData: (ventas: Venta[]) => void,
     onError?: (error: Error) => void

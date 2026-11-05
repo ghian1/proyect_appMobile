@@ -31,6 +31,7 @@ export interface Producto {
   descripcion?: string;
   createdAt?: FieldValue | Date;
   imagenUrl?: string | null; 
+  esAlPeso?: boolean;
 }
 
 export type NuevoProductoInput = Omit<Producto, "id" | "creadoEn" | "actualizadoEn">;
@@ -101,6 +102,7 @@ export async function crearProducto(datos: NuevoProductoInput): Promise<string> 
     stock: Number(datos.stock),
     descripcion: datos.descripcion ? datos.descripcion.trim() : "",
     imagenUrl: datos.imagenUrl || null,
+    esAlPeso: Boolean(datos.esAlPeso),
     creadoEn: serverTimestamp(),
     actualizadoEn: serverTimestamp(),
   };
@@ -130,6 +132,10 @@ export async function actualizarProducto(
   if (cambios.categorias && cambios.categorias.length > 0) {
     payload.categorias = cambios.categorias;
     payload.categoria = cambios.categorias[0];
+  }
+
+  if (cambios.esAlPeso !== undefined) {
+    payload.esAlPeso = Boolean(cambios.esAlPeso);
   }
 
   await updateDoc(docRef, payload);

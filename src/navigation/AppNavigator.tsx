@@ -5,7 +5,7 @@ import { Platform, Text } from 'react-native';
 
 // Pantallas de las solapas inferiores
 import { S02_StockHomeScreen } from '../screens/S02_StockHomeScreen';
-// NUEVO: Se importa la pantalla S11_MetricasScreen para la segunda solapa principal
+// Pantalla S11_MetricasScreen para la segunda solapa principal
 import { S11_MetricasScreen } from '../screens/S11_MetricasScreen';
 
 // Tipados y navegadores anidados
@@ -20,7 +20,7 @@ import VentasNavigator from './VentasNavigator';
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// NUEVO: Configuración de la Tab Bar simplificada a 2 pestañas (Inicio y Métricas), con íconos reducidos y proporcionales
+// Configuración de la Tab Bar simplificada a 2 pestañas (Inicio y Métricas), con íconos reducidos y proporcionales
 function TabNavigator() {
   return (
     <Tab.Navigator 
@@ -67,7 +67,7 @@ function TabNavigator() {
           ),
         }} 
       />
-      {/* NUEVO: Pestaña 2: Métricas y Control de Caja */}
+      {/* Pestaña 2: Métricas y Control de Caja */}
       <Tab.Screen 
         name="S11_Metricas" 
         component={S11_MetricasScreen} 

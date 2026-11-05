@@ -109,7 +109,9 @@ export function S09_VentasScreen() {
 
             let coincideStock = true;
             if (estadoStockSeleccionado === 'Stock Crítico') {
-                coincideStock = item.stock > 0 && item.stock < 5;
+                coincideStock = item.esAlPeso
+                    ? item.stock > 0 && item.stock < 1000
+                    : item.stock > 0 && item.stock < 5;
             } else if (estadoStockSeleccionado === 'Sin Stock') {
                 coincideStock = item.stock <= 0;
             }
@@ -154,54 +156,107 @@ export function S09_VentasScreen() {
         if (!producto.id) return;
 
         const itemExistente = carrito[producto.id];
-        const cantidadActual = itemExistente ? itemExistente.cantidad : 0;
+        const esAlPeso = Boolean(producto.esAlPeso);
 
-        if (cantidadActual + 1 > producto.stock) {
-            Alert.alert('Stock Máximo', `Solo hay ${producto.stock} unidades disponibles de este producto.`);
-            return;
+        if (esAlPeso) {
+            const cantidadActual = itemExistente ? itemExistente.cantidad : 0;
+            // Al seleccionar un producto al peso, la cantidad inicial por defecto en el carrito es 100g.
+            // Los botones + aumentan la cantidad en saltos de 50 gramos.
+            const nuevaCantidad = itemExistente ? cantidadActual + 50 : 100;
+
+            if (nuevaCantidad > producto.stock) {
+                const stockDisplay =
+                    producto.stock >= 1000
+                        ? `${Number((producto.stock / 1000).toFixed(2))} kg`
+                        : `${producto.stock} g`;
+                Alert.alert('Stock Máximo', `Solo hay ${stockDisplay} disponibles de este producto.`);
+                return;
+            }
+
+            const subtotal = Number(((nuevaCantidad / 100) * producto.precio).toFixed(2));
+
+            setCarrito({
+                ...carrito,
+                [producto.id]: {
+                    idProducto: producto.id,
+                    nombre: producto.nombre,
+                    precio: producto.precio,
+                    cantidad: nuevaCantidad,
+                    subtotal,
+                    esAlPeso: true,
+                },
+            });
+        } else {
+            const cantidadActual = itemExistente ? itemExistente.cantidad : 0;
+            const nuevaCantidad = cantidadActual + 1;
+
+            if (nuevaCantidad > producto.stock) {
+                Alert.alert('Stock Máximo', `Solo hay ${producto.stock} unidades disponibles de este producto.`);
+                return;
+            }
+
+            setCarrito({
+                ...carrito,
+                [producto.id]: {
+                    idProducto: producto.id,
+                    nombre: producto.nombre,
+                    precio: producto.precio,
+                    cantidad: nuevaCantidad,
+                    subtotal: Number((nuevaCantidad * producto.precio).toFixed(2)),
+                    esAlPeso: false,
+                },
+            });
         }
-
-        const nuevaCantidad = cantidadActual + 1;
-        setCarrito({
-            ...carrito,
-            [producto.id]: {
-                idProducto: producto.id,
-                nombre: producto.nombre,
-                precio: producto.precio,
-                cantidad: nuevaCantidad,
-                subtotal: nuevaCantidad * producto.precio,
-            },
-        });
     };
 
     const restarDelCarrito = (productoId: string) => {
         const itemExistente = carrito[productoId];
         if (!itemExistente) return;
 
-        if (itemExistente.cantidad <= 1) {
-            const nuevoCarrito = { ...carrito };
-            delete nuevoCarrito[productoId];
-            setCarrito(nuevoCarrito);
+        if (itemExistente.esAlPeso) {
+            // Saltos de 50g con un mínimo de 50g (si está en 50g se quita del carrito)
+            if (itemExistente.cantidad <= 50) {
+                const nuevoCarrito = { ...carrito };
+                delete nuevoCarrito[productoId];
+                setCarrito(nuevoCarrito);
+            } else {
+                const nuevaCantidad = itemExistente.cantidad - 50;
+                const subtotal = Number(((nuevaCantidad / 100) * itemExistente.precio).toFixed(2));
+                setCarrito({
+                    ...carrito,
+                    [productoId]: {
+                        ...itemExistente,
+                        cantidad: nuevaCantidad,
+                        subtotal,
+                    },
+                });
+            }
         } else {
-            const nuevaCantidad = itemExistente.cantidad - 1;
-            setCarrito({
-                ...carrito,
-                [productoId]: {
-                    ...itemExistente,
-                    cantidad: nuevaCantidad,
-                    subtotal: nuevaCantidad * itemExistente.precio,
-                },
-            });
+            if (itemExistente.cantidad <= 1) {
+                const nuevoCarrito = { ...carrito };
+                delete nuevoCarrito[productoId];
+                setCarrito(nuevoCarrito);
+            } else {
+                const nuevaCantidad = itemExistente.cantidad - 1;
+                setCarrito({
+                    ...carrito,
+                    [productoId]: {
+                        ...itemExistente,
+                        cantidad: nuevaCantidad,
+                        subtotal: Number((nuevaCantidad * itemExistente.precio).toFixed(2)),
+                    },
+                });
+            }
         }
     };
 
     const listaItemsCarrito = useMemo(() => Object.values(carrito), [carrito]);
     const totalCantidad = useMemo(
-        () => listaItemsCarrito.reduce((acc, item) => acc + item.cantidad, 0),
+        () => listaItemsCarrito.reduce((acc, item) => acc + (item.esAlPeso ? 1 : item.cantidad), 0),
         [listaItemsCarrito]
     );
     const totalImporte = useMemo(
-        () => listaItemsCarrito.reduce((acc, item) => acc + item.subtotal, 0),
+        () => Number(listaItemsCarrito.reduce((acc, item) => acc + item.subtotal, 0).toFixed(2)),
         [listaItemsCarrito]
     );
 
@@ -300,10 +355,24 @@ export function S09_VentasScreen() {
 
     const renderProductoItem = ({ item }: { item: Producto }) => {
         const sinStock = item.stock <= 0;
-        // NUEVO: Identificación de stock crítico (entre 1 y 4 unidades)
-        const esCritico = item.stock > 0 && item.stock < 5;
+        const esAlPeso = Boolean(item.esAlPeso);
+        const esCritico = item.stock > 0 && (esAlPeso ? item.stock < 1000 : item.stock < 5);
         const itemEnCarrito = item.id ? carrito[item.id] : undefined;
         const cantidadEnCarrito = itemEnCarrito ? itemEnCarrito.cantidad : 0;
+
+        let textoStock = 'SIN STOCK';
+        if (!sinStock) {
+            if (esAlPeso) {
+                if (item.stock >= 1000) {
+                    const kg = Number((item.stock / 1000).toFixed(2));
+                    textoStock = `Stock: ${kg} kg`;
+                } else {
+                    textoStock = `Stock: ${item.stock} g`;
+                }
+            } else {
+                textoStock = `Stock: ${item.stock} u.`;
+            }
+        }
 
         return (
             <View style={styles.card}>
@@ -320,6 +389,12 @@ export function S09_VentasScreen() {
                             <Text style={styles.textoSinImagen}>Sin Imagen</Text>
                         </View>
                     )}
+                    {esAlPeso && (
+                        <View style={styles.badgeAlPesoFlotante}>
+                            <Ionicons name="scale-outline" size={10} color="#0284C7" />
+                            <Text style={styles.textoBadgeAlPeso}>Al peso</Text>
+                        </View>
+                    )}
                 </View>
 
                 <View style={styles.cardInfo}>
@@ -333,7 +408,9 @@ export function S09_VentasScreen() {
                         {item.nombre}
                     </Text>
 
-                    <Text style={styles.cardPrecio}>${(item?.precio ?? 0).toFixed(2)}</Text>
+                    <Text style={styles.cardPrecio}>
+                        ${(item?.precio ?? 0).toFixed(2)}{esAlPeso ? ' / 100g' : ''}
+                    </Text>
                 </View>
 
                 <View style={styles.cardStockContainer}>
@@ -348,7 +425,7 @@ export function S09_VentasScreen() {
                         ]}
                     >
                         <Text style={[styles.textoBadgeStock, sinStock ? styles.textoSinStock : esCritico ? styles.textoStockCritico : styles.textoConStock]}>
-                            {sinStock ? 'SIN STOCK' : `Stock: ${item.stock} u.`}
+                            {textoStock}
                         </Text>
                     </View>
                 </View>
@@ -361,6 +438,7 @@ export function S09_VentasScreen() {
                     ) : cantidadEnCarrito > 0 ? (
                         <View style={styles.selectorCantidad}>
                             <TouchableOpacity
+                                testID={item.id ? `btn-restar-${item.id}` : undefined}
                                 style={styles.botonRestar}
                                 onPress={() => item.id && restarDelCarrito(item.id)}
                                 activeOpacity={0.7}
@@ -368,9 +446,12 @@ export function S09_VentasScreen() {
                                 <Text style={styles.textoBotonRestar}>-</Text>
                             </TouchableOpacity>
 
-                            <Text style={styles.textoCantidad}>{cantidadEnCarrito}</Text>
+                            <Text style={styles.textoCantidad}>
+                                {esAlPeso ? `${cantidadEnCarrito}g` : cantidadEnCarrito}
+                            </Text>
 
                             <TouchableOpacity
+                                testID={item.id ? `btn-sumar-${item.id}` : undefined}
                                 style={styles.botonSumarPequeno}
                                 onPress={() => agregarAlCarrito(item)}
                                 activeOpacity={0.7}
@@ -380,6 +461,7 @@ export function S09_VentasScreen() {
                         </View>
                     ) : (
                         <TouchableOpacity
+                            testID={item.id ? `btn-agregar-${item.id}` : undefined}
                             style={styles.botonAgregarDirecto}
                             onPress={() => agregarAlCarrito(item)}
                             activeOpacity={0.8}
@@ -583,7 +665,9 @@ export function S09_VentasScreen() {
                                             <View style={{ flex: 1 }}>
                                                 <Text style={styles.itemNombre}>{item.nombre}</Text>
                                                 <Text style={styles.itemDetalle}>
-                                                    {item.cantidad} x ${(item?.precio ?? 0).toFixed(2)}
+                                                    {item.esAlPeso
+                                                        ? `${item.cantidad}g x $${(item?.precio ?? 0).toFixed(2)} (cada 100g)`
+                                                        : `${item.cantidad} x $${(item?.precio ?? 0).toFixed(2)}`}
                                                 </Text>
                                             </View>
                                             <Text style={styles.itemSubtotal}>${(item?.subtotal ?? 0).toFixed(2)}</Text>
@@ -906,7 +990,7 @@ const styles = StyleSheet.create({
     imagenContenedor: {
         width: '100%',
         height: 100,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: '#FFFFFF',
         borderRadius: 10,
         borderWidth: 1,
         borderColor: '#F1F5F9',
@@ -914,6 +998,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         overflow: 'hidden',
         marginBottom: 8,
+        position: 'relative',
+    },
+    badgeAlPesoFlotante: {
+        position: 'absolute',
+        top: 6,
+        left: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#E0F2FE',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        gap: 3,
+        borderWidth: 1,
+        borderColor: '#BAE6FD',
+    },
+    textoBadgeAlPeso: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#0284C7',
     },
     imagenProd: {
         width: '100%',

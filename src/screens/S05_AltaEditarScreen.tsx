@@ -53,6 +53,7 @@ export function S05_AltaEditarScreen() {
 
   const [precioTexto, setPrecioTexto] = useState<string>('');
   const [stockTexto, setStockTexto] = useState<string>('');
+  const [esAlPeso, setEsAlPeso] = useState<boolean>(false);
   const [descripcion, setDescripcion] = useState<string>('');
   const [guardando, setGuardando] = useState<boolean>(false);
   const [cargandoInicial, setCargandoInicial] = useState<boolean>(false);
@@ -95,6 +96,7 @@ export function S05_AltaEditarScreen() {
 
           setPrecioTexto(productoEncontrado.precio !== undefined ? String(productoEncontrado.precio) : '');
           setStockTexto(productoEncontrado.stock !== undefined ? String(productoEncontrado.stock) : '');
+          setEsAlPeso(Boolean(productoEncontrado.esAlPeso));
           setDescripcion(productoEncontrado.descripcion || '');
           setImagenUri(productoEncontrado.imagenUrl || null);
         } else if (!productoEncontrado && activo) {
@@ -211,7 +213,7 @@ export function S05_AltaEditarScreen() {
     }
   };
 
-  // NUEVO: Función para seleccionar archivo (PNG/JPG) desde la galería
+  // Función para seleccionar archivo (PNG/JPG) desde la galería
   const seleccionarDeGaleria = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -265,6 +267,7 @@ export function S05_AltaEditarScreen() {
         stock: stockFinal,
         descripcion,
         imagenUrl: imagenUri || null,
+        esAlPeso,
       };
 
       if (esEdicion && productId) {
@@ -404,12 +407,71 @@ export function S05_AltaEditarScreen() {
               </View>
             </View>
 
+            {/* SELECTOR DE TIPO DE VENTA: UNIDAD / POR GRAMOS */}
+            <View style={styles.campo}>
+              <Text style={styles.label}>Tipo de venta *</Text>
+              <View style={styles.tipoVentaContainer}>
+                <TouchableOpacity
+                  testID="btn-tipo-unidad"
+                  style={[
+                    styles.botonTipoVenta,
+                    !esAlPeso && styles.botonTipoVentaActivo,
+                  ]}
+                  onPress={() => setEsAlPeso(false)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name="cube-outline"
+                    size={16}
+                    color={!esAlPeso ? '#FFFFFF' : '#64748B'}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text
+                    style={[
+                      styles.textoTipoVenta,
+                      !esAlPeso && styles.textoTipoVentaActivo,
+                    ]}
+                  >
+                    Por Unidad
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  testID="btn-tipo-gramos"
+                  style={[
+                    styles.botonTipoVenta,
+                    esAlPeso && styles.botonTipoVentaActivo,
+                  ]}
+                  onPress={() => setEsAlPeso(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name="scale-outline"
+                    size={16}
+                    color={esAlPeso ? '#FFFFFF' : '#64748B'}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text
+                    style={[
+                      styles.textoTipoVenta,
+                      esAlPeso && styles.textoTipoVentaActivo,
+                    ]}
+                  >
+                    Por Gramos
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             <View style={styles.filaInputs}>
               <View style={[styles.campo, styles.columna]}>
-                <Text style={styles.label}>Precio ($) *</Text>
+                <Text style={styles.label}>
+                  {esAlPeso ? 'Precio cada 100g ($) *' : 'Precio ($) *'}
+                </Text>
                 <TextInput
+                  testID="input-precio"
                   style={styles.input}
-                  placeholder="0.00"
+                  placeholder={esAlPeso ? 'Ej: 1200' : '0.00'}
                   placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
                   value={precioTexto}
@@ -420,10 +482,13 @@ export function S05_AltaEditarScreen() {
               </View>
 
               <View style={[styles.campo, styles.columna]}>
-                <Text style={styles.label}>Stock inicial *</Text>
+                <Text style={styles.label}>
+                  {esAlPeso ? 'Stock total en gramos (g) *' : 'Stock inicial *'}
+                </Text>
                 <TextInput
+                  testID="input-stock"
                   style={styles.input}
-                  placeholder="0"
+                  placeholder={esAlPeso ? 'ej: 5000 para 5 kg' : '0'}
                   placeholderTextColor="#94A3B8"
                   keyboardType="number-pad"
                   value={stockTexto}
@@ -431,6 +496,11 @@ export function S05_AltaEditarScreen() {
                   returnKeyType="done"
                   onSubmitEditing={Keyboard.dismiss}
                 />
+                {esAlPeso && (
+                  <Text style={styles.notaGramos}>
+                    💡 ej: 5000 para 5 kg (1 kg = 1000g)
+                  </Text>
+                )}
               </View>
             </View>
 
@@ -772,5 +842,46 @@ const styles = StyleSheet.create({
   textoModalAgregar: {
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  tipoVentaContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#E0F2FE',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    gap: 6,
+  },
+  botonTipoVenta: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  botonTipoVentaActivo: {
+    backgroundColor: '#0284C7',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  textoTipoVenta: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  textoTipoVentaActivo: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  notaGramos: {
+    fontSize: 11,
+    color: '#0284C7',
+    marginTop: 4,
+    fontWeight: '500',
   },
 });

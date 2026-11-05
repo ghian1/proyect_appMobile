@@ -1,5 +1,7 @@
 import {
+  actualizarProducto,
   crearCategoriaBD,
+  crearProducto,
   eliminarCategoriaBD,
 } from '../../src/services/productService';
 import {
@@ -8,6 +10,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  updateDoc,
   writeBatch,
 } from 'firebase/firestore';
 
@@ -123,5 +126,44 @@ describe('Módulo de Stock - Servicio productService (Categorías)', () => {
       expect.objectContaining({ activa: true })
     );
     expect(mockBatch.commit).toHaveBeenCalledTimes(1);
+  });
+
+  it('debe persistir un producto al peso con esAlPeso=true y stock en gramos', async () => {
+    (addDoc as jest.Mock).mockResolvedValueOnce({ id: 'prod_queso_123' });
+
+    const nuevoId = await crearProducto({
+      nombre: 'Queso Cremoso La Paulina',
+      precio: 1200, // cada 100g
+      stock: 5000, // 5 kg en gramos
+      categorias: ['Fiambrería'],
+      categoria: 'Fiambrería',
+      esAlPeso: true,
+    });
+
+    expect(addDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        nombre: 'Queso Cremoso La Paulina',
+        precio: 1200,
+        stock: 5000,
+        esAlPeso: true,
+      })
+    );
+    expect(nuevoId).toBe('prod_queso_123');
+  });
+
+  it('debe actualizar la propiedad esAlPeso de un producto existente', async () => {
+    await actualizarProducto('prod_queso_123', {
+      precio: 1350,
+      esAlPeso: true,
+    });
+
+    expect(updateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        precio: 1350,
+        esAlPeso: true,
+      })
+    );
   });
 });

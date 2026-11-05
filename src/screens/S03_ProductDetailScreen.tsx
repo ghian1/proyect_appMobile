@@ -84,7 +84,22 @@ export function S03_ProductDetailScreen(): React.ReactNode {
   // Lógica de colores dinámicos para el stock
   const stock = producto?.stock ?? 0;
   const esSinStock = stock <= 0;
-  const esCritico = stock > 0 && stock <= 5;
+  const esAlPeso = Boolean(producto?.esAlPeso);
+  const esCritico = stock > 0 && (esAlPeso ? stock < 1000 : stock <= 5);
+
+  let textoStockDetalle = 'SIN STOCK';
+  if (!esSinStock) {
+    if (esAlPeso) {
+      if (stock >= 1000) {
+        const kg = Number((stock / 1000).toFixed(2));
+        textoStockDetalle = `${kg} kg`;
+      } else {
+        textoStockDetalle = `${stock} g`;
+      }
+    } else {
+      textoStockDetalle = `${stock} unidades`;
+    }
+  }
 
   // Manejo seguro de categoría/categorías
   const nombreCategoria = (
@@ -114,7 +129,10 @@ export function S03_ProductDetailScreen(): React.ReactNode {
         <View style={styles.cardInfo}>
           <Text style={styles.categoria}>{nombreCategoria}</Text>
           <Text style={styles.nombre}>{producto.nombre}</Text>
-          <Text style={styles.precio}>${(producto?.precio ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</Text>
+          <Text style={styles.precio}>
+            ${(producto?.precio ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            {esAlPeso ? ' (cada 100g)' : ''}
+          </Text>
 
           <View style={styles.separator} />
 
@@ -141,7 +159,7 @@ export function S03_ProductDetailScreen(): React.ReactNode {
                     : styles.textoNormal,
                 ]}
               >
-                {esSinStock ? 'SIN STOCK' : `${stock} unidades`}
+                {textoStockDetalle}
               </Text>
             </View>
           </View>
